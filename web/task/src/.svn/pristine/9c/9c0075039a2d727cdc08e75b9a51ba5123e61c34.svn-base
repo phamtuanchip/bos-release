@@ -1,0 +1,377 @@
+<template>
+  <div>
+    <el-container direction="vertical">
+      <el-row><span><b> Theo phòng ban </b></span></el-row>
+      <el-row>
+        <CustomizableTable v-if="colorLoaded" :tblData="departmentTableData" :colors = "colors"></CustomizableTable>
+      </el-row>
+      <el-row v-if="isShowEmpTable"><span><b> Theo nhân sự</b></span></el-row>
+      <el-row v-if="isShowEmpTable">
+        <CustomizableTable v-if="colorLoaded" :tblData="employeeTableData" :colors = "colors"></CustomizableTable>
+      </el-row>
+      <el-row v-else>
+        <div class="tip">
+          <p>Hãy chọn một phòng ban để hiển thị báo cáo theo từng nhân viên của phòng</p>
+        </div>
+      </el-row>
+    </el-container>
+
+
+  </div>
+</template>
+
+<script>
+    import CustomizableTable from "../CustomizableTable";
+    export default {
+      name: "TaskSummaryTable",
+      components: {CustomizableTable},
+      methods : {
+        getDepartmentTableData () {
+          var taskRequest = {
+            RequestClass: "xBase",
+            RequestAction: "Request",
+            TotalRequests: 1,
+            R1_RequestTemplate: "AG_Task_Task.Search",
+            R1_RequestDataGroup: "DataGroup.danh-sach-cong-viec.04b66",
+            R1_RequestFields: "Id;Status;Deadline;Project;ProjectName",
+            R1_Project: this.currentDept,
+            R1_DeadlineStartValue: '2017-01-01T00:00:00',
+            R1_DeadlineEndValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[0]),
+            R1_Status: 'db8e700c-78c6-4f35-9477-36e0335888f5;fab4fa55-cf1d-4625-8f65-8b43e832061b;05625d94-3884-4f00-9918-254c1216c6cd;' +
+              '5756c3d9-37a8-4032-bd6c-2a01161b73c7;bbc399a9-a2b4-45ad-b948-32e5623dc021',
+          };
+
+          this.$Utils.post(taskRequest).then(taskdata => {
+            var taskList = this.$Utils.getDataWithRoot(taskdata,"R1.Data.TasksDS.Task");
+            var tasksObject = {};
+            taskList.forEach(item=> {
+              if (!tasksObject[item.Project]) {
+                tasksObject[item.Project] = {
+                  Category: item.Project,
+                  Lead: item.ProjectName,
+                  TotalAttachments: 0,
+                  TotalComments: 0,
+                  TotalDownloads: 0,
+                  TotalPages: 0,
+                  TotalRatingPoints: 0,
+                  TotalRatings: 0,
+                  BeforeTotalPages: 0,
+                }
+              }
+              tasksObject[item.Project].BeforeTotalPages++;
+            });
+
+            var req = {
+              RequestClass: "xBase",
+              RequestAction: "Request",
+              TotalRequests: 1,
+              R1_RequestTemplate: "xDocument_Document.Search",
+              R1_RequestDataGroup: "DataGroup.tasksummary.0d2g9",
+              R1_Code: "TaskSummary",
+              R1_Category: this.currentDept,
+              R1_RequestFields: "Id;Category;Code;Lead;TotalAttachments;TotalComments;TotalDownloads;TotalPages;TotalRatingPoints;TotalRatings;DisplayDate;State",
+              R1_State: 0,
+              R1_DisplayDateStartValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[0]),
+              R1_DisplayDateEndValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[1]),
+            };
+
+            this.$Utils.post(req).then(response => {
+              var tmp = this.$Utils.getDataWithRoot(response.R1, 'Data.DocumentDS.Document');
+              // var objData = {}
+              tmp.forEach(item=> {
+                if(!tasksObject[item.Category]){
+                  tasksObject[item.Category] = {
+                    Category: item.Category,
+                    Lead: item.Lead,
+                    TotalAttachments: 0,
+                    TotalComments: 0,
+                    TotalDownloads: 0,
+                    TotalPages: 0,
+                    TotalRatingPoints: 0,
+                    TotalRatings: 0,
+                    BeforeTotalPages: 0,
+                  }
+                }
+                tasksObject[item.Category].TotalAttachments+= isNaN(parseInt(item.TotalAttachments))?0:parseInt(item.TotalAttachments);
+                tasksObject[item.Category].TotalComments+=isNaN(parseInt(item.TotalComments))?0:parseInt(item.TotalComments);
+                tasksObject[item.Category].TotalDownloads+=isNaN(parseInt(item.TotalDownloads))?0:parseInt(item.TotalDownloads);
+                tasksObject[item.Category].TotalPages+=isNaN(parseInt(item.TotalPages))?0:parseInt(item.TotalPages);
+                tasksObject[item.Category].TotalRatingPoints+=isNaN(parseInt(item.TotalRatingPoints))?0:parseInt(item.TotalRatingPoints);
+                tasksObject[item.Category].TotalRatings+=isNaN(parseInt(item.TotalRatings))?0:parseInt(item.TotalRatings);
+              });
+              this.departmentTableData.cellData = Object.values(tasksObject);
+            });
+          });
+        },
+        getEmployeeTableData (item, type) {
+          var taskRequest = {
+            RequestClass: "xBase",
+            RequestAction: "Request",
+            TotalRequests: 1,
+            R1_RequestTemplate: "AG_Task_Task.Search",
+            R1_RequestDataGroup: "DataGroup.danh-sach-cong-viec.04b66",
+            R1_RequestFields: "Id;Status;Deadline;Worker;WorkerName",
+            R1_Project: item.Category,
+            R1_DeadlineStartValue: '2017-01-01T00:00:00',
+            R1_DeadlineEndValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[0]),
+            R1_Status: 'db8e700c-78c6-4f35-9477-36e0335888f5;fab4fa55-cf1d-4625-8f65-8b43e832061b;05625d94-3884-4f00-9918-254c1216c6cd;' +
+            '5756c3d9-37a8-4032-bd6c-2a01161b73c7;bbc399a9-a2b4-45ad-b948-32e5623dc021',
+          };
+
+          this.$Utils.post(taskRequest).then(taskdata => {
+            var taskList = this.$Utils.getDataWithRoot(taskdata, "R1.Data.TasksDS.Task");
+            var tasksObject = {};
+            taskList.forEach(ele=> {
+              if (!tasksObject[ele.Worker]) {
+                tasksObject[ele.Worker] = {
+                  Category: ele.Category,
+                  Lead: ele.Lead,
+                  Author: ele.WorkerName,
+                  DisplayImage: ele.Worker,
+                  TotalAttachments: 0,
+                  TotalComments: 0,
+                  TotalDownloads: 0,
+                  TotalPages: 0,
+                  TotalRatingPoints: 0,
+                  TotalRatings: 0,
+                  BeforeTotalPages: 0,
+                }
+              }
+              tasksObject[ele.Worker].BeforeTotalPages++;
+            });
+            var req = {
+              RequestClass: "xBase",
+              RequestAction: "Request",
+              TotalRequests: 1,
+              R1_RequestTemplate: "xDocument_Document.Search",
+              R1_RequestDataGroup: "DataGroup.tasksummary.0d2g9",
+              R1_Code: "TaskSummary",
+              R1_RequestFields: "Id;Category;Code;Lead;TotalAttachments;TotalComments;TotalDownloads;TotalPages;TotalRatingPoints;TotalRatings;DisplayDate;State;DisplayImage;Author",
+              R1_State: 1,
+              R1_DisplayDateStartValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[0]),
+              R1_DisplayDateEndValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[1]),
+            };
+            req['R1_'+type] = item[type]
+            this.$Utils.postCheckResult(req).then(response => {
+              var tmp = this.$Utils.getDataWithRoot(response.R1, 'Data.DocumentDS.Document');
+
+              tmp.forEach(element=> {
+                if(!tasksObject[element.DisplayImage]){
+                  tasksObject[element.DisplayImage] = {
+                    Category: element.Category,
+                    Lead: element.Lead,
+                    Author: element.Author,
+                    DisplayImage: element.DisplayImage,
+                    TotalAttachments: 0,
+                    TotalComments: 0,
+                    TotalDownloads: 0,
+                    TotalPages: 0,
+                    TotalRatingPoints: 0,
+                    TotalRatings: 0,
+                    BeforeTotalPages: 0,
+                  }
+                }
+                tasksObject[element.DisplayImage].TotalAttachments+= isNaN(parseInt(element.TotalAttachments))?0:parseInt(element.TotalAttachments);
+                tasksObject[element.DisplayImage].TotalComments+=isNaN(parseInt(element.TotalComments))?0:parseInt(element.TotalComments);
+                tasksObject[element.DisplayImage].TotalDownloads+=isNaN(parseInt(element.TotalDownloads))?0:parseInt(element.TotalDownloads);
+                tasksObject[element.DisplayImage].TotalPages+=isNaN(parseInt(element.TotalPages))?0:parseInt(element.TotalPages);
+                tasksObject[element.DisplayImage].TotalRatingPoints+=isNaN(parseInt(element.TotalRatingPoints))?0:parseInt(element.TotalRatingPoints);
+                tasksObject[element.DisplayImage].TotalRatings+=isNaN(parseInt(element.TotalRatings))?0:parseInt(element.TotalRatings);
+              });
+              // this.employeeTableData.cellData = Object.values(tasksObject);
+              this.cachedEmployeeData = Object.values(tasksObject);
+              var data = this.$rootScope.selectedWorkerId;
+              if(!data || data.length ==0 || (data.length == 1 && data[0].indexOf(";")>-1)){
+                data = this.$rootScope.allUsers;
+              }
+              this.employeeTableData.cellData = this.cachedEmployeeData.filter(item => {
+                return data.indexOf(item.DisplayImage) >-1;
+              })
+              this.isShowEmpTable = true;
+            });
+          });
+        },
+        getColorSettings () {
+          var request = {
+            RequestClass: 'xBase',
+            RequestAction: 'Request',
+            TotalRequests: 1,
+            R1_RequestTemplate: 'SettingNew.SearchSetting',
+            R1_IncludedNestedSetParent: false,
+            R1_ParentCode: 'xSetting.Project.Parameter.TaskSummaryTable.Color'
+          }
+          this.$Utils.postCheckResult(request).then((data)=> {
+            data = this.$Utils.getDataWithRoot(data.R1, 'Data.DynamicDS.Setting');
+            var colors = this.$Utils.treeify(data, 'Id', 'ParentId')
+            this.colors = this.$Utils.rotateDementionArr(colors, 'Code')
+            this.colorLoaded = true;
+          });
+        },
+      },
+      watch :{
+      },
+      created () {
+        // var firstDayOfWeekCfg = this.$getItemLocalStorage('firstDayOfWeekCfg') ? parseInt(JSON.parse(this.$getItemLocalStorage('firstDayOfWeekCfg')).Value) : 1;
+        // this.currentWeek.monday  = this.$moment().isoWeekday(firstDayOfWeekCfg).startOf("isoweek")._d;
+        // this.currentWeek.sunday = this.$moment().isoWeekday(firstDayOfWeekCfg).endOf("isoweek")._d;
+        this.currentDept = this.$rootScope.selectedGroupId;
+        this.getColorSettings ();
+        if(this.$isMantisAdmin() || this.$isSystemAdmin()){
+          this.currentUser.departments = "";
+          this.currentDept = this.$rootScope.selectedGroupId===""?this.currentUser.departments: this.$rootScope.selectedGroupId;
+        } else {
+          var request = {
+            RequestClass: 'xBase',
+            RequestAction: 'Request',
+            TotalRequests: 1,
+            R1_RequestTemplate: 'tblGroup.Search',
+            R1_RequestDataGroup: 'DataGroup.quan-ly-du-an.053gf',
+            R1_RequestFields: 'GroupId;GroupName;GroupType;Status',
+            R1_GroupType: 1,
+            R1_Status: 1,
+            R1_AssignedUser: this.$getItemLocalStorage(this.$localStorageConstant.SessionId),
+          }
+          this.$Utils.postCheckResult(request).then((data) => {
+            data = this.$Utils.getDataWithRoot(data.R1, 'Data.UserDS.Group');
+            this.currentUser.departments = ""
+            data.forEach(item=>{
+              this.currentUser.departments +=item.GroupId+";";
+            });
+            // this.currentDept =  this.currentUser.departments;
+            // this.getDepartmentTableData();
+          });
+        }
+        this.getDepartmentTableData();
+        this.$hub.$on("groupPicked", data => {
+          this.currentDept = data===""?this.currentUser.departments: data;
+          if(this.currentDept !== undefined){
+            this.getDepartmentTableData();
+            this.employeeTableData.cellData=[];
+            this.isShowEmpTable = false;
+          }
+        });
+
+        this.currentWeek.monday  = this.$rootScope.dateFilter[0];
+        this.currentWeek.sunday = this.$rootScope.dateFilter[1];
+        this.$hub.$on("datePicked", data => {
+          if(this.currentDept !== undefined) {
+            if(this.$Utils.formatDateTime(data[0], 'YYYYMMDD')==this.$Utils.formatDateTime(this.currentWeek.monday, 'YYYYMMDD') &&
+              this.$Utils.formatDateTime(data[1], 'YYYYMMDD')==this.$Utils.formatDateTime(this.currentWeek.sunday, 'YYYYMMDD')
+            ){
+              this.employeeTableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong tuần";
+                  return false;
+                }
+              })
+              //
+              this.departmentTableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong tuần";
+                  return false;
+                }
+              })
+            }else{
+              this.employeeTableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong thời gian lọc"
+                  return false;
+                }
+              })
+              //
+              this.departmentTableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong thời gian lọc"
+                  return false;
+                }
+              })
+            }
+            this.getDepartmentTableData();
+            this.employeeTableData.cellData = [];
+          }
+        });
+        this.$hub.$on("workerPicked", data => {
+          if(this.currentDept !== undefined) {
+            if(!data || data.length ==0 || (data.length == 1 && data[0].indexOf(";")>-1)){
+              data = this.$rootScope.allUsers;
+            }
+            this.employeeTableData.cellData = this.cachedEmployeeData.filter(item => {
+              return data.indexOf(item.DisplayImage) >-1;
+            })
+
+          }
+        });
+        this.$hub.$on("columnClicked", data => {
+          this.getEmployeeTableData(data[0], data[1]);
+        });
+      },
+      destroyed () {
+        this.$hub.$off('columnClicked');
+        this.$hub.$off('groupPicked');
+        this.$hub.$off('workerPicked');
+        this.$hub.$off('datePicked');
+      },
+      data () {
+          return {
+            currentWeek: {
+              monday : '',
+              sunday : '',
+            },
+            cachedEmployeeData: [],
+            colorLoaded: false,
+            isShowEmpTable: false,
+            currentUser:JSON.parse(this.$getItemLocalStorage(this.$localStorageConstant.LoggedOnUser)),
+            selectedGroupIds: "",
+            listDepartments: [],
+            currentDept: undefined,
+            departmentTableData : {
+              stripe: true,
+              border: true,
+              fit: false,
+              width: "100%",
+              cellData: [
+              ],
+              columns: [
+                { label: "Phòng", name: "Lead", fixed: true, width: 250, isClickable: true, valId: 'Category'},
+                { label: "Tạo mới", name: "TotalAttachments", fixed: false, width: 'auto'},
+                { label: "Hoàn thành", name: "TotalComments", fixed: false, width: 'auto'},
+                { label: "Chuyển trạng thái", name: "TotalDownloads", fixed: false, width: 'auto'},
+                { label: "Quá hạn trong tuần", name: "TotalPages", fixed: false, width: 'auto'},
+                { label: "Quá hạn từ trước", name: "BeforeTotalPages", fixed: false, width: 'auto'},
+                { label: "Bình luận", name: "TotalRatingPoints", fixed: false, width: 'auto'},
+                { label: "Cập nhật", name: "TotalRatings", fixed: false, width: 'auto'},
+              ],
+            },
+            employeeTableData : {
+              stripe: true,
+              border: true,
+              fit: false,
+              width: "100%",
+              cellData: [
+              ],
+              columns: [
+                { label: "Nhân sự", name: "Author", fixed: true, width: 250},
+                { label: "Tạo mới", name: "TotalAttachments", fixed: false, width: 'auto'},
+                { label: "Hoàn thành", name: "TotalComments", fixed: false, width: 'auto'},
+                { label: "Chuyển trạng thái", name: "TotalDownloads", fixed: false, width: 'auto'},
+                { label: "Quá hạn trong tuần", name: "TotalPages", fixed: false, width: 'auto'},
+                { label: "Quá hạn từ trước", name: "BeforeTotalPages", fixed: false, width: 'auto'},
+                { label: "Bình luận", name: "TotalRatingPoints", fixed: false, width: 'auto'},
+                { label: "Cập nhật", name: "TotalRatings", fixed: false, width: 'auto'},
+              ],
+            },
+            colors : {}
+          }
+      }
+    }
+</script>
+
+<style scoped>
+  .tip {
+    padding: 8px 16px;
+    background-color: #ecf8ff;
+    border-radius: 4px;
+    border-left: 5px solid #50bfff;
+    margin: 20px 0;
+  }
+</style>

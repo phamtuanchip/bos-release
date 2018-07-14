@@ -1,0 +1,198 @@
+<template>
+     <el-collapse  v-model="activeNames" >
+            <el-collapse-item :name="name">
+
+              <template slot="title">
+                 <div class="title-box">
+                  <i :class="'fa fa-lg fa-list-alt ' + ($isMobileDevice ? 'ml-1 mr-1' : ' ml-3 mr-3')"></i>
+                  <span :class="$isMobileDevice?'': 'h5'">{{display}}</span>
+                  <span class="ml-1 bg-secondary px-2 " style="border-radius:10px;">
+                    {{myNumberIndex}}/{{myTotal}}
+                  </span>
+                  <el-button :class="!$isMobileDevice ? 'mt-2' : 'mt-1'" style="float:right;" :style="$isMobileDevice ? 'padding-top: 3px; padding-bottom: 3px;': '' " @click.stop="showDetailTask(name)" round v-if="data && data.length > 0">
+                    <span v-if="!$isMobileDevice">Xem thêm</span>
+                    <i v-else class="fa fa-ellipsis-h" aria-hidden="true"></i>
+                  </el-button>
+                </div>
+              </template>
+
+  <el-table v-if="myData.length > 0" :show-header="false" :data="myData" border style="width: 100%" stripe>
+    <el-table-column label="Mã" :width =  "$isMobileDevice ?  '65': actionWith" fixed="left">
+
+      <template slot-scope="scope">
+          <span :style="'text-decoration:' + (taskDone.indexOf(scope.row.Status) >-1 ? 'line-through' : '')">
+          {{scope.row.Index}}
+          </span>
+            <i v-if="scope.row.Status" class="fa fa-square pl-2" :style="'color:' + statusColors[scope.row.Status.toUpperCase()]"></i>
+            <i v-if="scope.row.PriorityId" :class="'fa ' + listPriority[scope.row.PriorityId].Value + ' pl-2'" ></i>
+            <a href="javascript:void(0)"  v-if="!$isMobileDevice" class="fa fa-pencil pl-2" @click="showTaskDetail(scope.row)"></a>
+            <i v-if="scope.row.TotalDownload && !$isMobileDevice" class="fa fa-paperclip pl-2" >{{scope.row.TotalDownload}}</i>
+            <i v-if="scope.row.TotalComment && !$isMobileDevice" class="fa fa-comments-o pl-2" >{{scope.row.TotalComment}}</i>
+            <i v-if="!$isMobileDevice" class="fa fa-clock-o pl-2" :style="parseFloat(scope.row.overHours+ '')<0?'color: red':'' ">{{scope.row.overHours}}</i>
+            <i v-if="scope.row.UserList && !$isMobileDevice"  class="fa fa-eye pl-2"  >{{totalView(scope.row.UserList)}}</i>
+
+            <span v-if="mode != 'projects'" style="cursor: pointer">
+                  <i class="fa fa-flag-o pl-2" v-if="!(scope.row.Subscribe && scope.row.Subscribe.indexOf($Utils.getUserInfo('UserId'))!=-1)" @click="subscribeMe(scope.row, false)" style="cursor: pointer"></i>
+                  <i class="fa fa-flag-o pl-2"  v-else style="color: red" @click="subscribeMe(scope.row, true)"></i>
+            </span>
+      </template>
+    </el-table-column>
+    <el-table-column label="Tên">
+      <template slot-scope="scope">
+          <a href="javascript:void(0)" @click="showTaskDetail(scope.row)">
+              <span :style="'text-decoration:' + (taskDone.indexOf(scope.row.Status) >-1 ? 'line-through' : '')">
+                {{scope.row.Name}}
+              </span>
+          </a>
+          <div>
+            {{formatDate(scope.row.PlanStartDate)}}&nbsp;|&nbsp;{{scope.row.WorkerName}}
+            <i v-if="$isMobileDevice" class="fa fa-clock-o" :style="parseFloat(scope.row.overHours+ '')<0?'color: red':'' ">{{scope.row.overHours}}</i>
+            <el-badge v-if="scope.row.TotalDownload && $isMobileDevice" :value="scope.row.TotalDownload ? scope.row.TotalDownload : 0" :max="99" class="item">
+              <i class="fa fa-paperclip "></i>
+            </el-badge>
+            <el-badge v-if="scope.row.TotalComment && $isMobileDevice" :value="scope.row.TotalComment ? scope.row.TotalComment : 0" :max="99" class="item">
+              <i class="fa fa-comment-o "></i>
+            </el-badge>
+            <el-badge v-if="scope.row.UserList && $isMobileDevice" :value="totalView(scope.row.UserList)" :max="99"  class="item">
+              <i  class="fa fa-eye pl-2" ></i>
+            </el-badge>
+            <el-progress v-if="scope.row.Percent" :text-inside="true" status="success"
+                                     :percentage="scope.row.Percent"/>
+         </div>
+      </template>
+    </el-table-column>
+
+  </el-table>
+     </el-collapse-item>
+      </el-collapse>
+</template>
+
+<style>
+.el-table .warning-row {
+  background: oldlace;
+}
+
+.el-badge {
+  margin-right: 10px;
+}
+
+.el-table .success-row {
+  background: #f0f9eb;
+}
+</style>
+
+<script>
+import ShowTaskDetail from "@/components/static/ShowTaskDetail";
+export default {
+  inject: [
+    "taskDone",
+    "formatDate",
+    "statusColors",
+    "priorityColors",
+    "listStatus",
+    "listPriority",
+    "subscribeMe",
+    "showDetailTask"
+  ],
+  props: ["name", "display", "data", "type", "numberIndex", "total", "mode"],
+  methods: {
+    showTaskDetail(item, flag) {
+      if (this.mode === "projets") return;
+      if (flag) {
+        this.$set(item, "activeName", flag);
+        this.$hub.$emit(
+          "set-modal-data",
+          "Chi tiết công việc",
+          "60%",
+          true,
+          "center",
+          ShowTaskDetail,
+          true,
+          "",
+          item
+        );
+      } else {
+        this.$hub.$emit(
+          "set-modal-data",
+          "Chi tiết công việc",
+          "60%",
+          true,
+          "center",
+          ShowTaskDetail,
+          true,
+          "",
+          item
+        );
+      }
+    },
+    totalView(text) {
+      return text ? JSON.parse(text).length : 0;
+    }
+  },
+
+  data() {
+    return {
+      myData: [],
+      myTotal: 0,
+      myNumberIndex: 0,
+      activeNames: [this.name],
+      actionWith: window.innerWidth / 100 * 12,
+      nameWith: window.innerWidth / 100 - this.actionWith,
+      typex: this.type,
+    };
+  },
+  watch: {
+    data:  {
+      handler: "ntnhat",
+      deep: true,
+    },
+    numberIndex: function(newVal) {
+      this.myNumberIndex = newVal;
+    },
+    total: function(newVal) {
+      this.myTotal = newVal;
+    }
+  },
+  methods: {
+    ntnhat(newVal){
+      if(this.typex=='Date'){
+      }
+      this.myData = newVal;
+    },
+  },
+  created() {
+    this.$hub.$on("subscribe", item => {
+      if ("Knows" == this.type) {
+        if (item.isUnsubscribe) {
+          this.myData = this.myData.filter(ele => {
+            return ele.Id != item.task.Id;
+          });
+          if (this.myTotal == this.myNumberIndex)
+            this.myTotal = this.myNumberIndex = this.myData.length;
+          this.myNumberIndex = this.myData.length;
+        } else {
+          if (
+            this.$rootScope.dateFilter &&
+            this.$rootScope.dateFilter[0] &&
+            this.$rootScope.dateFilter[1]
+          ) {
+            if (
+              this.$moment(this.$rootScope.dateFilter[0]) <=
+              this.$moment(item.task.PlanStartDate)
+            ) {
+              this.myData.push(item.task);
+              if (this.myTotal == this.myNumberIndex)
+                this.myTotal = this.myNumberIndex = this.myData.length;
+              this.myNumberIndex = this.myData.length;
+            }
+          }
+        }
+      } else
+        this.myData = this.myData.map(ele => {
+          if (ele.Id == item.task.Id) ele = item.task;
+          return ele;
+        });
+    });
+  }
+};
+</script>

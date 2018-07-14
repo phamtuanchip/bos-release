@@ -1,0 +1,353 @@
+<template>
+  <div class="app">
+    <AppHeader :currentUser = "loggedUser"/>
+    <div class="app-body" style="-webkit-overflow-scrolling: touch;">
+      <Sidebar :navItems="nav"/>
+      <main class="main">
+        <breadcrumb :list="list"/>
+        <div class="container-fluid">
+          <router-view :key="$route.fullPath"></router-view>
+        </div>
+      </main>
+      <AppAside/>
+    </div>
+    <AppFooter/>
+  </div>
+</template>
+
+<script>
+import nav from "@/_nav";
+import Vue from "vue";
+import {
+  Header as AppHeader,
+  Sidebar,
+  Aside as AppAside,
+  Footer as AppFooter,
+  Breadcrumb
+} from "@/components/";
+const resoled = "532e9f1e-f5dc-4e75-b7c9-2bd785bbda67";
+const closed = "53cc3819-c019-4749-b0e4-52213438049b";
+export default {
+  provide() {
+    return {
+      loadAvatar: this.loadAvatar,
+      taskDone: this.taskDone,
+      notDone: this.notDone,
+      loggedUser: this.loggedUser,
+      statusColors: JSON.parse(
+        this.$getItemLocalStorage(this.$localStorageConstant.settingColor)
+      ),
+      listStatus: this.listStatus, //this.$Utils.rotateDementionArr(JSON.parse(this.$getItemLocalStorage(this.$localStorageConstant.listStatus)), 'Id'),
+      listPriority: this.listPriority, //this.$Utils.rotateDementionArr(JSON.parse(this.$getItemLocalStorage(this.$localStorageConstant.listPriority)), 'Id'),
+      priorityColors: JSON.parse(
+        this.$getItemLocalStorage(this.$localStorageConstant.arrPriorityColor)
+      ),
+      formatDate: this.formatDate,
+      overHours: this.overHours,
+      SessionId: this.$getItemLocalStorage(
+        this.$localStorageConstant.SessionId
+      ),
+      subscribeMe: this.subscribe,
+      getDayName: this.getDayName
+    };
+  },
+
+  name: "Home",
+  components: {
+    AppHeader,
+    Sidebar,
+    AppAside,
+    AppFooter,
+    Breadcrumb
+  },
+  data() {
+    return {
+      // listStatus: this.$Lodash.chain(JSON.parse(this.$getItemLocalStorage(this.$localStorageConstant.listStatus))).keyBy('Id').value(),
+      //listPriority: this.$Lodash.chain(JSON.parse(this.$getItemLocalStorage(this.$localStorageConstant.listPriority))).keyBy('Id').value(),
+      nav: [],
+      loggedUser: JSON.parse(localStorage.getItem("LoggedOnUser")),
+      taskDone: [resoled, closed]
+    };
+  },
+  computed: {
+    listStatus() {
+      return this.$Lodash
+        .chain(
+          JSON.parse(
+            this.$getItemLocalStorage(this.$localStorageConstant.listStatus)
+          )
+        )
+        .keyBy("Id")
+        .value();
+    },
+    listPriority() {
+      return this.$Lodash
+        .chain(
+          JSON.parse(
+            this.$getItemLocalStorage(this.$localStorageConstant.listPriority)
+          )
+        )
+        .keyBy("Id")
+        .value();
+    },
+    notDone() {
+      // console.log(this.$Lodash.difference(Object.keys(this.listStatus),this.taskDone))
+      return this.$Lodash.difference(
+        Object.keys(this.listStatus),
+        this.taskDone
+      );
+    },
+    name() {
+      return this.$route.name;
+    },
+    list() {
+      return this.$route.matched;
+    }
+  },
+  methods: {
+    loadAvatar(avatar) {
+      if (avatar == undefined) avatar = "assets/images/avatars/profile.png";
+      avatar = avatar.replace("profile.jpg", "profile.png");
+      var strAvatar =
+        avatar === "assets/images/avatars/profile.png"
+          ? this.$appUri.BaseURL + avatar
+          : this.$appUri.BaseURL +
+            avatar.replace("/", "") +
+            "&Height=50&Width=50";
+
+      return strAvatar;
+    },
+    getDayName(item, format) {
+      var itemDate = format ? Vue.moment(item, format) : Vue.moment(item);
+      var todayDate = Vue.moment(Date.Now);
+      itemDate.locale("vi");
+      todayDate.locale("vi");
+      var dateNow = this.$Utils.formatDateTime(Date.Now, "DD/MM/YYYY");
+      if (dateNow === this.$Utils.formatDateTime(item, "DD/MM/YYYY")) {
+        return itemDate.from(todayDate) + " ngày " + itemDate.format("l");
+      }
+      var yesterday = this.$Utils.formatDateTime(
+        new Date(new Date().getTime() - 24 * 60 * 60 * 1000),
+        "DD/MM/YYYY"
+      );
+      if (this.$Utils.formatDateTime(item, "DD/MM/YYYY") === yesterday) {
+        return itemDate.calendar() + " ngày " + itemDate.format("l");
+      }
+      return itemDate.format("LLLL");
+    },
+    subscribe(item, isUnsubscribe) {
+      var cachedSubscribe = item.Subscribe + "";
+      if (isUnsubscribe) {
+        item.Subscribe =
+          item.Subscribe.split(";")
+            .filter(ele => {
+              return ele != this.$Utils.getUserInfo("UserId");
+            })
+            .join(";") + ";";
+      } else {
+        item.Subscribe =
+          (item.Subscribe ? item.Subscribe : "") +
+          this.$Utils.getUserInfo("UserId");
+      }
+      if (!isUnsubscribe) {
+        var linkSubcribe = {
+          RequestClass: "xBase",
+          Parent: item.Id,
+          Child: this.$Utils.getUserInfo("UserId"),
+          Code: "Subscribe",
+          Name: "Subscribe",
+          RequestAction: "LinkUserToObject",
+          ParentTable: "xObject",
+          ChildTable: "tblUser",
+          RequestTemplate: "Permission.Insert"
+        };
+        this.$Utils.post(linkSubcribe).then(ldata => {});
+
+        var linkEmailIns = {
+          RequestClass: "xBase",
+          Parent: item.Id,
+          Child: this.$Utils.getUserInfo("UserId"),
+          Code: "Email",
+          Name: "Email",
+          RequestAction: "LinkUserToObject",
+          ParentTable: "xObject",
+          ChildTable: "tblUser",
+          RequestTemplate: "Permission.Insert"
+        };
+        this.$Utils.post(linkEmailIns).then(ldata => {});
+      } else {
+        var linkEmail = {
+          RequestAction: "SearchLinked",
+          RequestClass: "Addition",
+          ConditionFields: "Parent;Code;Child",
+          StaticFields: "Code;Child;Parent;Name;Created;Description",
+          OrderFields: "Created DESC",
+          Parent: item.Id,
+          Child: this.$Utils.getUserInfo("UserId"),
+          Code: "Subscribe;Email"
+        };
+        this.$Utils.post(linkEmail).then(result => {
+          var arrLink =
+            result.TotalCount == 1
+              ? [result.Data.DataDS.Linked]
+              : result.Data.DataDS.Linked;
+          if (arrLink == undefined) return;
+          var removeLinks = {
+            RequestClass: "xBase",
+            RequestAction: "Request",
+            TotalRequests: arrLink.length,
+            RequestTemplate: "Permission.Remove"
+          };
+          $.each(arrLink, (key, link) => {
+            removeLinks["R" + (key + 1) + "_Id"] = link.Id;
+            removeLinks["R" + (key + 1) + "_Parent"] = link.Parent;
+            removeLinks["R" + (key + 1) + "_Child"] = link.Child;
+            removeLinks["R" + (key + 1) + "_Code"] = link.Code;
+          });
+          this.$Utils.post(removeLinks).then(data => {});
+        });
+      }
+      var request = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: 1,
+        R1_RequestTemplate: "AG_Task_Task.Update",
+        R1_RequestDataGroup: "DataGroup.danh-sach-cong-viec.04b66",
+        R1_RequestFields: "Id;Subscribe",
+        R1_Id: item.Id,
+        R1_Subscribe: item.Subscribe
+      };
+      this.$Utils.post(request).then(data => {
+        this.$hub.$emit("subscribe", {
+          task: item,
+          isUnsubscribe: isUnsubscribe
+        });
+      });
+    },
+    // subcribe(tasskId, usserId) {
+    //   return new Promise((resolve, reject) => {
+
+    //     if(tasskId && usserId)
+    //    setTimeout( ()=>{ resolve('validated')}, 10000)
+    //     else  reject('error');
+    //   })
+    // },
+    overHours(item) {
+      var temp = this.$Utils.expressionToString(
+        item,
+        "{{Deadline|DateTime:toNows}}"
+      );
+      if (
+        this.taskDone.indexOf(item.Status) == -1 &&
+        eval(new Date() > new Date(item.PlanStartDate))
+      ) {
+        return Math.round(parseFloat(temp) * 10) / 10;
+      }
+      return "0.0";
+    },
+    formatDate: function(date) {
+      return Vue.moment(date).format("DD/MM/YYYY");
+    },
+    init() {
+      var arrPages = [];
+      arrPages = this.$getItemLocalStorage(
+        this.$localStorageConstant.ListPages
+      );
+      if (arrPages == null || this.$localStorageConstant.ListPages == "") {
+        var request = this.$Utils.updateParamsSingleRequest(
+          this.$Lodash.cloneDeep(this.$singleRequest),
+          {
+            AssignedUser: this.$getItemLocalStorage(
+              this.$localStorageConstant.SessionId
+            ),
+            RequestTemplate: "SettingNew.SearchSetting",
+            ParentCode: "xSetting.Project.Page"
+          }
+        );
+        this.$Utils.post(request).then(data => {
+          arrPages = this.$Utils.getDataWithRoot(
+            data.R1,
+            "Data.DynamicDS.Setting"
+          );
+          this.$setItemLocalStorage(
+            this.$localStorageConstant.ListPages,
+            JSON.stringify(arrPages)
+          );
+          this.nav = this.buildMenu(false, arrPages);
+        });
+      } else {
+        this.nav = this.buildMenu(true, arrPages);
+      }
+    },
+    buildMenu(isLoad, arrPages) {
+      var rightMenu = {};
+      if (isLoad) {
+        rightMenu = JSON.parse(arrPages);
+      } else {
+        rightMenu = arrPages;
+      }
+      rightMenu = rightMenu.filter(ele => {
+        ele.Description = JSON.parse(ele.Description);
+        ele.Value = JSON.parse(ele.Value);
+        ele["url"] = ele.Description.UrlPage.replace("static/", "/")
+          .replace("configuration/", "/")
+          .replace("dynamic", "/dynamic");
+        ele["name"] = ele.Description.Caption;
+        ele["icon"] = ele.Description.MenuIcon;
+        return ele.Description.IsShowOnMenu;
+      });
+      var tree = this.$Utils.createCustomTreeFromList(
+        rightMenu,
+        "Id",
+        "ParentId",
+        "children",
+        {},
+        {}
+      );
+      return tree;
+    }
+  },
+  created() {
+    this.init();
+  },
+  mounted() {},
+  watch: {
+    "$route.fullPath": function(after) {
+      // console.log('1', $("a[href$='/config']")[0].classList);
+      // console.log('2', $("a[class~='router-link-exact-active']")[0].classList);
+      if ($("a[class~='router-link-exact-active']")[0])
+        $("a[class~='router-link-exact-active']")[0].classList.remove(
+          "router-link-exact-active",
+          "open",
+          "active"
+        );
+      if (
+        after.indexOf("dynamic/view-all-task-page?") > -1 ||
+        after.indexOf("/scrumboard") > -1
+      ) {
+        $("a[href$='/timeline']")[0].classList.add(
+          "router-link-exact-active",
+          "open",
+          "active"
+        );
+      } else if (
+        after.indexOf("setting-users") > -1 ||
+        after.indexOf("/setting-group-project") > -1 ||
+        after.indexOf("/setting-ui") > -1
+      ) {
+        $("a[href$='/config']")[0].classList.add(
+          "router-link-exact-active",
+          "open",
+          "active"
+        );
+      }
+    }
+  }
+};
+</script>
+
+<style lang="scss">
+.container-fluid {
+  padding: 0px 3px !important;
+}
+</style>

@@ -1,0 +1,426 @@
+<template>
+    <div class="gantt-container">
+        <gantt-header :onPrev="onPrev"
+                      :onNext="onNext"
+                      :onToday="onToday"
+                      :onView="onView"
+                      :switchView="onSwitchView"
+                      :onChangeProject="onChangeProject"
+                      :onChangeWorker="onChangeWorker"
+                      :onChangeDate="onChangeDate"
+                      :onChangeStatus="onChangeStatus"
+                      :onChangeActive="onChangeActive"
+                      :onChangeDueDate="onChangeDueDate"
+                      :onChangeOverDue="onChangeOverDue"
+                      :onResetFilter="onResetFilter"
+                      :baseList="list"
+                      :workers="users"
+                      :status="listStatus"
+                      :isShowTask="isShow" 
+                      ></gantt-header>
+        <gantt-body :startDate="ganttStart" :isShowTask="isShow" 
+                    :endDate="ganttEnd"
+                    :showTaskId="showTaskId" :ganttData="tasks" ></gantt-body>
+    </div>
+</template>
+<script>
+import ganttHeader from "@/components/dynamic/vuegantt/ganttHeader";
+import ganttBody from "@/components/dynamic/vuegantt/ganttBody";
+import { animationScroll } from "@/utils/animationScroll";
+import { $$ } from "@/utils/dom";
+import moment from "moment";
+import Vue from "vue";
+import testGanttData from "@/components/dynamic/vuegantt/ganttData";
+
+export default {
+  name: "gantt",
+  components: {
+    ganttHeader,
+    ganttBody
+  },
+
+  inject: ["SessionId", "taskDone", "notDone", "listStatus"],
+  data() {
+    return {
+      isShow: true,
+      ganttStart: this.getGanttDate().start,
+      ganttEnd: this.getGanttDate().end,
+      ProjectStartTimeStartValue: "",
+      ProjectStartTimeEndValue: "",
+      selectedDepts: undefined,
+      selectedProjects: undefined,
+      selectedWorkers: undefined,
+      selectedStatus: undefined,
+      selectedDate: true,
+      selectedActive: undefined,
+      selectedProjs: undefined,
+      dueDate: false,
+      overDue: false,
+      T_token: 0,
+      timelineSetting: null,
+      loading: true,
+      testGanttData: testGanttData,
+      tasks: { data: [] },
+      list: [],
+      users: [],
+      active: [],
+      deactive: []
+    };
+  },
+  props: ["projects", "workers"],
+  watch: {
+    projects: {
+      handler: function(after, before) {
+        this.list = after;
+      },
+      deep: true
+    },
+    workers: {
+      handler: function(after, before) {
+        this.active = this.$Lodash.filter(after, { Status: "1" });
+        this.deactive = this.$Lodash.filter(after, { Status: "0" });
+        this.users = [
+          { label: "HOẠT ĐỘNG", options: this.active },
+          { label: "KHÔNG HOẠT ĐỘNG", options: this.deactive }
+        ];
+      },
+      deep: true
+    }
+  },
+  computed: {
+    showTaskId() {
+      return "";
+    }
+  },
+  methods: {
+    onResetFilter(
+      selectedDate,
+      selectedWorkers,
+      selectedStatus,
+      dueDate,
+      overDue,
+      selectedActive
+    ) {
+      this.selectedDate = selectedDate;
+      this.selectedWorkers = selectedWorkers;
+      this.selectedStatus = selectedStatus;
+      this.dueDate = dueDate;
+      this.overDue = overDue;
+      this.selectedActive = selectedActive;
+      this.initGantt();
+    },
+    onChangeDueDate(data) {
+      this.dueDate = data;
+      this.initGantt();
+    },
+    onChangeOverDue(data) {
+      this.overDue = data;
+      this.initGantt();
+    },
+    onSwitchView() {
+      this.isShow = !this.isShow;
+    },
+
+    checkStatus(ele) {
+      if (ele.Status && this.taskDone.indexOf(ele.Status) > -1)
+        return "completed";
+      if (moment(ele.Deadline).isBefore(moment())) return "overdue";
+      if (
+        moment(ele.Deadline).isAfter(moment()) &&
+        moment(ele.Deadline).isBefore(moment().endOf("days"))
+      )
+        return "due-today";
+      return "planned";
+    },
+    initGantt() {
+      const fields =
+        "Id;Index;Name;PlanStartDate;Deadline;Status;Sumary;VersionProject;Progress;StatusName;Worker";
+      var req = this.$Lodash.cloneDeep(this.$singleRequest);
+      req.R1_RequestTemplate = "tblGroup.Search";
+      req.R1_RequestDataGroup = "DataGroup.quan-ly-du-an.053gf";
+      req.R1_RequestFields =
+        "GroupId;GroupName;GroupType;GroupParent;ProjectCode;CreatedBy;State;Status;Type;Department";
+      req.R1_GroupType = "4";
+      req.R1_GroupId = this.selectedProjs;
+      if (!this.$isSystemAdmin() && !this.$isMantisAdmin()) {
+        req.R1_AssignedUser = this.SessionId;
+      }
+      // if (this.list.length > 0) {
+      //   req.R1_GroupId = Object.keys(this.$Lodash.keyBy(this.list, "Id"));
+      // }
+      this.$Utils.post(req).then(dt => {
+        var db = this.$Utils.getDataWithRoot(dt.R1, "Data.UserDS.Group");
+        this.tasks.data = [];
+        if (db.length !== 0) {
+          if (this.selectedDepts) {
+            var sDept = this.selectedDepts.split(";");
+            db = this.$Lodash.filter(db, p => {
+              var pDept = [];
+              if (p.Department) pDept = p.Department.split(";");
+              return this.$Lodash.intersection(sDept, pDept).length > 0;
+            });
+          }
+          var projectIds = Object.keys(this.$Lodash.keyBy(db, "GroupId"));
+
+          var i = 1;
+          var request = {
+            RequestClass: "xBase",
+            RequestAction: "Request",
+            TotalRequests: i
+          };
+          request["R" + i + "_RequestTemplate"] = "AG_Task_Task.Search";
+          request["R" + i + "_RequestDataGroup"] =
+            "DataGroup.danh-sach-cong-viec.04b66";
+          request["R" + i + "_RequestFields"] = fields;
+          request["R" + i + "_VersionProject"] = projectIds.join(";");
+          request["R" + i + "_RequestOrderFields"] = "PlanStartDate ASC";
+          if (this.selectedActive) {
+            if (this.selectedActive === "1") {
+              request["R" + i + "_Worker"] = Object.keys(
+                this.$Lodash.keyBy(this.active, "UserId")
+              ).join(";");
+            } else if (this.selectedActive === "0") {
+              request["R" + i + "_Worker"] = Object.keys(
+                this.$Lodash.keyBy(this.deactive, "UserId")
+              ).join(";");
+            }
+          }
+          if (this.selectedDate) {
+            request[
+              "R" + i + "_PlanStartDateStartValue"
+            ] = this.$Utils.formatDateTime(this.ProjectStartTimeStartValue);
+            request[
+              "R" + i + "_PlanStartDateEndValue"
+            ] = this.$Utils.formatDateTime(this.ProjectStartTimeEndValue);
+          }
+          request["R" + i + "_AssignedUser"] = this.SessionId;
+
+          if (this.selectedWorkers) {
+            request["R" + i + "_Worker"] = this.selectedWorkers;
+          }
+          if (this.selectedStatus) {
+            request["R" + i + "_Status"] = this.selectedStatus;
+          }
+          if (this.overDue || this.dueDate) {
+            request["R" + i + "_Status"] = this.notDone.join(";");
+          }
+
+          this.$Utils.postCheckResult(request).then(data => {
+            var j = 1;
+            var task = this.$Utils.getDataWithRoot(
+              data["R" + j],
+              "Data.TasksDS.Task"
+            );
+            if (this.overDue) {
+              task = this.$Lodash.filter(task, t => {
+                return moment(t.Deadline).isBefore(moment());
+              });
+            }
+            if (this.dueDate) {
+              task = this.$Lodash.filter(task, t => {
+                return (
+                  moment(t.Deadline).isAfter(moment()) &&
+                  moment(t.Deadline).isBefore(moment().endOf("days"))
+                );
+              });
+            }
+
+            db.forEach(pro => {
+              if (
+                this.$Lodash.filter(task, { VersionProject: pro.GroupId })
+                  .length > 0
+              )
+                this.tasks.data.push({
+                  id: pro.GroupId,
+                  text: pro.GroupName,
+                  progress: 0,
+                  open: true,
+                  type: "project"
+                });
+            });
+
+            task.forEach(ele => {
+              ele.real_start_date = null;
+              ele.real_due_date = null;
+              ele.deleted = false;
+              ele.startDueStatus = "";
+              ele.status = this.checkStatus(ele);
+              ele.progress = ele.Progress ? parseInt(ele.Progress) : 0;
+              ele.text = ele.Name;
+              ele.projectId = ele.VersionProject;
+              ele.parent = ele.VersionProject;
+              ele.id = ele.Id;
+              ele.start_date = this.$Utils.formatDateTime(
+                ele.PlanStartDate,
+                "DD-MM-YYYY"
+              );
+              ele.end_date = this.$Utils.formatDateTime(
+                ele.Deadline,
+                "DD-MM-YYYY"
+              );
+              ele.type = "task";
+              if (ele.Type) ele.type = ele.Type;
+              ele.startDate =
+                this.$Utils.formatDateTime(ele.PlanStartDate, "YYYY-MM-DD") +
+                " 00:00:00";
+              ele.dueDate =
+                this.$Utils.formatDateTime(ele.Deadline, "YYYY-MM-DD") +
+                " 00:00:00";
+              ele.duration = moment(ele.Deadline).diff(
+                moment(ele.PlanStartDate),
+                "days"
+              );
+              if (ele.duration == 0) {
+                ele.duration = 1;
+                ele.end_date = moment(ele.PlanStartDate)
+                  .add(1, "days")
+                  .format("DD-MM-YYYY");
+              }
+              this.tasks.data.push(ele);
+            });
+          });
+        }
+      });
+    },
+    getGanttDate(num) {
+      const ganttStart = new Date();
+      const ganttEnd = new Date();
+      let start, end;
+      if (num) {
+        start = ganttStart.setMonth(ganttStart.getMonth() - 6 - 11 * num);
+        end = ganttEnd.setMonth(ganttEnd.getMonth() + (6 - 11 * num));
+      } else {
+        start = ganttStart.setMonth(ganttStart.getMonth() - 6);
+        end = ganttEnd.setMonth(ganttEnd.getMonth() + 6);
+      }
+      this.ganttStart = start;
+      this.ganttEnd = end;
+      return {
+        start,
+        end
+      };
+    },
+    onChangeActive(data) {
+      if (data.length > 0) {
+        this.selectedActive = data;
+      } else {
+        this.selectedActive = undefined;
+      }
+      this.initGantt();
+    },
+    onChangeStatus(data) {
+      if (data.length > 0) {
+        this.selectedStatus = data.join(";");
+      } else {
+        this.selectedStatus = undefined;
+      }
+      this.initGantt();
+    },
+    onChangeWorker(data) {
+      if (data.length > 0) {
+        this.selectedWorkers = data.join(";");
+      } else {
+        this.selectedWorkers = undefined;
+      }
+      this.initGantt();
+    },
+    onChangeDate(data) {
+      this.selectedDate = data;
+      this.initGantt();
+    },
+    onChangeProject(data) {
+      if (data.length > 0) {
+        this.selectedProjects = data.join(";");
+      } else {
+        this.selectedProjects = undefined;
+      }
+      this.initGantt();
+    },
+    onPrevYear() {
+      this.T_token += 1;
+      this.getGanttDate(this.T_token);
+    },
+
+    onNextYear() {
+      this.T_token -= 1;
+      this.getGanttDate(this.T_token);
+    },
+
+    onPrev() {
+      const ganttScreenWidth = $$(".gantt_task")[0].clientWidth;
+      const currentPosition = $$(".gantt_task")[0].scrollLeft;
+      if (currentPosition - ganttScreenWidth > 0) {
+        animationScroll({
+          end: currentPosition - ganttScreenWidth,
+          type: "scrollLeft",
+          tagName: "gantt_task",
+          rate: 6
+        });
+      } else {
+        this.onPrevYear();
+      }
+    },
+
+    onNext() {
+      const ganttDataWidth = $$(".gantt_data_area")[0].clientWidth;
+      const ganttScreenWidth = $$(".gantt_task")[0].clientWidth;
+      const currentPosition = $$(".gantt_task")[0].scrollLeft;
+      if (currentPosition < ganttDataWidth - ganttScreenWidth) {
+        animationScroll({
+          end: currentPosition + ganttScreenWidth,
+          type: "scrollLeft",
+          tagName: "gantt_task",
+          rate: 6
+        });
+      } else {
+        this.onNextYear();
+      }
+    },
+
+    onToday() {
+      if (this.ganttStart && this.ganttEnd) {
+        if (moment().isBetween(this.ganttStart, this.ganttEnd)) {
+          const todayPosition = $$(".today")[0].offsetLeft;
+          const screenOffset = 180;
+          animationScroll({
+            end: todayPosition - screenOffset,
+            type: "scrollLeft",
+            tagName: "gantt_task",
+            rate: 6
+          });
+        } else {
+          this.T_token = 0;
+          this.getGanttDate();
+        }
+      }
+    },
+    onView(view) {}
+  },
+  created() {
+    this.$hub.$on("filterChanged", dataToPass => {
+      this.ProjectStartTimeStartValue = dataToPass.dateRangeSelected[0];
+      this.ProjectStartTimeEndValue = dataToPass.dateRangeSelected[1];
+      if (dataToPass.selectedDepts)
+        this.selectedDepts = dataToPass.selectedDepts.join(";");
+      if (dataToPass.selectedProjs)
+        this.selectedProjs = dataToPass.selectedProjs.join(";");
+      this.initGantt();
+    });
+    this.$root.$on("task-show", taskId => {
+      window.gantt.selectTask(taskId);
+    });
+    this.$root.$on("task-hide", taskId => {
+      window.gantt.unselectTask(taskId);
+    });
+  },
+  destroyed() {
+    this.$hub.$off("filterChanged");
+    this.$root.$off("task-show", () => {
+      window.gantt.selectTask();
+    });
+    this.$root.$off("task-hide", () => {
+      window.gantt.unselectTask();
+    });
+  }
+};
+</script>

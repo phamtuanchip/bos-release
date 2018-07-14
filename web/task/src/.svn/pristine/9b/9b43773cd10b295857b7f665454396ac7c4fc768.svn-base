@@ -1,0 +1,58 @@
+<template>
+  <el-table :data="tableData.cellData" :stripe="tableData.stripe" :border="tableData.border"
+            :style="'width:'+tableData.width" :empty-text="tableData.emptyText" highlight-current-row>
+    <el-table-column v-for="column in tableData.columns" :prop="column.name" :label = "column.label"
+                     :fixed="column.fixed" >
+      <template slot-scope="scope">
+        <div v-if="column.isClickable" style="cursor: pointer;" @click="emitEvent(scope.row, column)">
+          <i v-if="column.class" :class="column.class" ></i>
+          <a href="javascript:void(0)">{{scope.row[column.name]}}</a>
+        </div>
+        <div :style="'font-weight: bold ;color:'+ colorify(scope.row, column)" v-else>{{scope.row[column.name]}}</div>
+      </template>
+    </el-table-column>
+  </el-table>
+</template>
+
+<script>
+    export default {
+      name: "CustomizableTable",
+      props: ['tblData', 'colors'],
+      data () {
+        return {
+          tableData: this.tblData
+        }
+      },
+      watch : {
+        // tblData: {
+        //   handler: function (after, before) {
+        //     this.tblData = after
+        //   },
+        //   deep: true
+        // },
+      },
+      methods : {
+        emitEvent (item, column) {
+          this.$hub.$emit('columnClicked',[item, column.valId]);
+        },
+        colorify (row, column) {
+          var returnCols = ""
+          var cols = this.colors['TaskSummaryTable.Color.' + column.name];
+          if(cols ==undefined)
+            return '';
+          $.each(cols.children, (k, val) => {
+            var arr = val.Code.split('to');
+            if(parseInt(arr[0]) <= row[column.name] && row[column.name] <= parseInt(arr[1])){
+              returnCols = val.Color;
+              return false
+            }
+          });
+          return returnCols;
+        }
+      }
+    }
+</script>
+
+<style scoped>
+
+</style>

@@ -1,0 +1,26 @@
+{
+  "name": "edu.vn.bos",
+  "version": "1.2.5",
+  "displayName": "BOs Enterprise",
+  "cordova": {
+    "platforms": [
+      "android"
+    ],
+    "plugins": {
+      "cordova-plugin-whitelist": {},
+      "cordova-plugin-device": {},
+      "cordova-plugin-app-preferences": {},
+      "phonegap-plugin-push": {
+        "FCM_VERSION": "11.6.2"
+      }
+    }
+  },
+  "dependencies": {
+    "cordova": "^7.0.1",
+    "cordova-android": "^7.0.0",
+    "cordova-plugin-app-preferences": "git+https://github.com/vash15/me.apla.cordova.app-preferences.git",
+    "cordova-plugin-device": "^1.1.6",
+    "cordova-plugin-whitelist": "1",
+    "phonegap-plugin-push": "^2.1.3"
+  }
+}

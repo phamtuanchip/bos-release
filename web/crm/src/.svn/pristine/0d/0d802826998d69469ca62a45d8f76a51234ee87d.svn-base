@@ -1,0 +1,134 @@
+{
+	"relativeType": "n-1",
+	"actionType": "Insert",
+	"sources": [
+		{
+			"DataRoot": "Data.DocumentDS.Document",
+			"RequestTemplate": "xDocument_Document.Search",
+			"Code": "Warehouses",
+			"RequestDataGroup": "DataGroup.warehouses.01dh7",
+			"RequestFields": "Id;Name;Code"
+		},
+		{
+			"DataRoot": "Data.DocumentDS.Document",
+			"RequestTemplate": "xDocument_Document.Search",
+			"Code": "Product",
+			"RequestDataGroup": "DataGroup.product.19jev",
+			"RequestFields": "Code;Id;OfficialNumber;Barcode;Name;ProductCode;Category;CategoryName;SubCode;SubCodeName;CodeName;Color;ColorName;Size;SizeName"
+		}
+	],
+	"targets": [
+		{
+			"DataRoot": "Data.DocumentDS.Document",
+			"RequestTemplate": "xDocument_Document",
+			"NumberOfConditionField": 2,
+			"CheckExistSourceIndex1": 1,
+			"CheckExistSourceField1": "Id",
+			"CheckExistSourceIndex2": 2,
+			"CheckExistSourceField2": "Barcode",
+			"CheckExistCode1": "Status",
+			"CheckExistCode2": "MetaKeywords",
+			"Code": "Warehouse",
+			"RequestDataGroup": "DataGroup.warehouse.0fd40",
+			"RequestFields": "Code;Status;StatusName;ProductCode;MetaKeywords;Name;OfficialNumber;Categories;CategoriesName;MetaDescription;MetaDescriptionName;Lead;ProductColor;ProductColorName;TotalAttachments;Size;SizeName",
+			"binding": [
+				{
+					"sourceIndex": 1,
+					"sourceFileld": "Id",
+					"targetField": "Status",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 1,
+					"sourceFileld": "Name",
+					"targetField": "StatusName",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "OfficialNumber",
+					"targetField": "ProductCode",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "Barcode",
+					"targetField": "MetaKeywords",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "Name",
+					"targetField": "Name",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "ProductCode",
+					"targetField": "OfficialNumber",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "Category",
+					"targetField": "Categories",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "CategoryName",
+					"targetField": "CategoriesName",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "SubCode",
+					"targetField": "MetaDescription",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "SubCodeName",
+					"targetField": "MetaDescriptionName",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "CodeName",
+					"targetField": "Lead",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "Color",
+					"targetField": "ProductColor",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "ColorName",
+					"targetField": "ProductColorName",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "",
+					"targetField": "TotalAttachments",
+					"defaultValue": "0"
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "Size",
+					"targetField": "Size",
+					"defaultValue": ""
+				},
+				{
+					"sourceIndex": 2,
+					"sourceFileld": "SizeName",
+					"targetField": "SizeName",
+					"defaultValue": ""
+				}
+			]
+		}
+	]
+}

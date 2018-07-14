@@ -1,0 +1,25 @@
+{
+  "prepare_queue": {
+    "installed": [],
+    "uninstalled": []
+  },
+  "config_munge": {
+    "files": {}
+  },
+  "installed_plugins": {
+    "cordova-plugin-app-preferences": {
+      "PACKAGE_NAME": "mobile.mantis.vn"
+    },
+    "cordova-plugin-device": {
+      "PACKAGE_NAME": "mobile.mantis.vn"
+    },
+    "cordova-plugin-whitelist": {
+      "PACKAGE_NAME": "mobile.mantis.vn"
+    },
+    "phonegap-plugin-push": {
+      "FCM_VERSION": "11.6.2",
+      "PACKAGE_NAME": "mobile.mantis.vn"
+    }
+  },
+  "dependent_plugins": {}
+}

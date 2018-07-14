@@ -1,0 +1,98 @@
+<template>
+  <div class="blocklefttargetpanel">
+    <div class="headerMenu">{{title}}</div>
+    <el-card class="box-card border-box" v-for="item in vList" :key="item.Id">
+      <div slot="header" class="clearfix">
+        <div v-if="item.TargetType" class="tgSt"><b>Loại:</b>
+          <span v-if="item.TargetType === '1'"><b>{{item.TargetTypeName}}</b></span>
+          <span v-if="item.TargetType !== '1'">{{item.TargetTypeName}}</span>
+        </div>
+        <span v-if="item.TargetType === '1'" style="font-size: 1.3333em;"><b><a href="javaScript:void(0)" @click="fnOpenDetail(item, false)">{{item.Name}}</a></b></span>
+        <span v-if="item.TargetType !== '1'" style="font-size: 1.3333em;"><a href="javaScript:void(0)" @click="fnOpenDetail(item, false)">{{item.Name}}</a></span>
+
+        <div class="owner" v-if="item.Avatar">
+          <div v-if="item.TargetType === '1'"><img :src="loadAvatar(item.Avatar)" class="round-image"/> - {{item.GroupName}}</div>
+          <div v-if="item.TargetType !== '1'"><img :src="loadAvatar(item.Avatar)" class="round-image"/> - {{item.OwnerName}}</div>
+        </div>
+        <div class="owner" v-else>
+          <span v-if="item.TargetType === '1'"><i class="fa fa-users fa-lg mt-2"></i> - {{item.GroupName}}</span>
+          <span v-if="item.TargetType !== '1'"><i class="fa fa-user fa-lg mt-2"></i> - {{item.OwnerName}}</span>
+        </div>
+      </div>
+      <div class="bdCt text item">
+        <div v-if="item.TargetType !== '1'" class="tgSt"><b>Phòng:</b> {{item.GroupName}}</div>
+        <div v-if="item.TargetType === '1'" class="tgSt"><b>Quản lý:</b> {{item.OwnerName}}</div>
+        <div class="tgSt row p-0 m-0">
+          <div class="col-md-2 p-0 m-0">
+            <b style="white-space: nowrap">Tỉ lệ:</b>
+          </div>
+          <div class="col-md-10 p-0 m-0">
+            <el-progress :text-inside="true" :stroke-width="18" :percentage="parseFloat(item.Progress)"
+                         :status=" item.Progress? (parseFloat(item.Progress) >= 100 ? 'success' : parseFloat(item.Progress) === 0 ? '0' : '') : '0' "></el-progress>
+          </div>
+        </div>
+        <div class="tgSt"><b>Người thực hiện:</b> {{item.AssignedName}}</div>
+        <div class="tgSt"><b>Cập nhật:</b> {{getDayName(item.Modified)}}</div>
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<script>
+  export default {
+    inject: ['getDayName'],
+    props: ["title", "vList", "fnOpenDetail"],
+    data() {
+      return {
+        list: []
+      }
+    },
+    watch: {
+      "vList": function (newVal) {
+        //this.list = newVal;
+        //console.log('newVal==>>', newVal)
+      }
+    },
+    methods: {
+      loadAvatar(avatar) {
+        if (avatar == undefined) avatar = 'assets/images/avatars/profile.png';
+        avatar = avatar.replace('profile.jpg', 'profile.png');
+        var strAvatar =
+          avatar === "assets/images/avatars/profile.png"
+            ? this.$appUri.BaseURL + avatar
+            : this.$appUri.BaseURL + avatar.replace('/', '') + "&Height=50&Width=50";
+
+        return strAvatar;
+      }
+    },
+    mounted() {
+
+    }
+  }
+
+</script>
+
+<style lang="scss">
+  .blocklefttargetpanel{
+    .headerMenu{
+      color: #f0f3f5;
+      font-weight: bold;
+      font-size: 15px;
+      background-color: rgb(245, 8, 8) !important; 
+    }
+    .el-card__header, .el-card__body{
+      padding: 10px;
+    }
+
+    .round-image {
+      border-radius: 50%;
+      max-height: 25px;
+      display: inline-block;
+      //margin: auto;
+    }
+
+    .border-box {
+      border: 1px solid lightgray;
+    }
+  }
+</style>

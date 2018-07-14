@@ -1,0 +1,842 @@
+<template>
+  <div class="animated fadeIn document-list">
+    <div class="page-header mb-2" v-if="(!$isMobileDevice || $isMobile.iPad()) ? true : false">
+      <div class="title-box py-1 px-3">
+        <div class="row">
+          <h5 class="col m-auto"><i class="fa fa-folder-o"></i><span>  Tài liệu</span></h5>
+          <div class="col text-right pr-0">
+            <el-tooltip class="item" effect="dark" content="Thêm tài liệu" placement="top">
+              <router-link :to="'dynamic/knowhow-add-new-document'" class="el-button el-button--mini">
+                <i class="el-icon-plus"></i>
+              </router-link>
+            </el-tooltip>
+            <button class="btn btn-link " v-b-modal.Filter>
+              <i class="fa fa-filter fa-lg"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div :class="($isMobileDevice ? '' : 'row') + ' my-row'">
+      <div class="col-md-3 p-0 border-box">
+        <div class="my-header d-md-none d-lg-none d-xl-none">
+          <el-row style="width:100%">
+            <el-col :span="12">
+              <span><i class="fa fa-folder-o fa-lg pr-1"></i>Tài liệu</span>
+            </el-col>
+            <el-col :span="12" style="text-align: right;">
+              <router-link :to="'dynamic/knowhow-add-new-document'">
+                <i class="fa fa-plus fa-lg pr-1"></i>
+              </router-link>
+              <i class="fa fa-filter fa-lg pr-1" v-b-modal.Filter></i>
+
+              <span class="pr-1" @click="isCollapse =! isCollapse">
+                <i v-if="!isCollapse" class="fa fa-lg fa-caret-up"></i>
+                <i v-if="isCollapse" class="fa fa-lg fa-caret-down"></i>
+              </span>
+            </el-col>
+          </el-row>
+        </div>
+        <div>
+          <el-tabs type="card" @tab-click="handleClick"  v-show="!isCollapse">
+            <el-tab-pane v-for="tab in treeData" :label="tab.label" :name="tab.code">
+              <DocumentTree :datasource="tab.children" />
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+
+      </div>
+      <div class="col-md-9">
+        <el-container class="border-box bg-white">
+          <el-main class="p-0">
+            <el-table :data="tableData" border>
+              <el-table-column type="index" width="50"></el-table-column>
+              <el-table-column label="Công cụ"  width="90">
+                <template slot-scope="scope">
+                  <div class="row pl-1">
+                    <div v-for="(button, index) in listButtons" :key="index"
+                         v-if="scope.row.btnLst[button.Code]">
+                         <router-link :to="$Utils.expressionToString(scope.row, button.Redirect)"
+                                   class="btn btn-link p-0 pr-1"
+                                   v-if="button.ButtonType == 'Redirect' || button.ButtonType == 'Popup'"
+                                   :id="'exButton'+index + scope.row.Id">
+                        <i :class="button.Icon" aria-hidden="true"></i>
+                        <b-tooltip :target="'exButton'+index  + scope.row.Id " placement="bottom">
+                          {{(button.Description ? button.Description : button.Caption)}}
+                        </b-tooltip>
+                      </router-link>
+                      <b-button :id="'exButton'+index + scope.row.Id" variant="link" aria-label="" class="p-0 pr-1"
+                                v-on:click="onButtonClick(index,scope.row )"
+                                v-if="button.ButtonType != 'Redirect' && button.ButtonType != 'Popup'">
+                        <i :class="button.Icon" aria-hidden="true"></i>
+                        <b-tooltip :target="'exButton'+index  + scope.row.Id " placement="bottom">
+                          {{(button.Description ? button.Description : button.Caption)}}
+                        </b-tooltip>
+                      </b-button>
+                    </div>
+                  </div>
+                  <!--<button @click="shareDocument(scope.row)">  share</button>-->
+                </template>
+              </el-table-column>
+              <el-table-column label="Tiêu đề"  prop="Name">
+                <template slot-scope="scope">
+                  <div class="row pl-1" >
+                    <label><i :class="scope.row.FileTypeName"></i> --- {{scope.row.Name}}</label>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column v-for="title in titles" :prop="title.prop" :label="title.label" :key="title.prop" :width="title.prop==='VersionProject'?'180':90">
+              </el-table-column>
+            </el-table>
+
+            <Pagination v-if="tableData.length>0" :totalPage="totalP" :currentPage="currentP" :pagesize="maxItem" :pagesizes="[10, 25, 50]" :callback="handleSelectPage" :sizeChanged="handleSizeChange"/>
+          </el-main>
+        </el-container>
+      </div>
+    </div>
+    <b-modal id="Filter" ref="Filter" title="Bộ lọc" header-bg-variant="primary" hide-footer>
+      <template>
+        <el-form label-position="top">
+          <el-form-item class="text-center">
+            <el-button @click="searchList">Tìm kiếm</el-button>
+            <el-button @click="clearInput()">Xóa trắng</el-button>
+          </el-form-item>
+          <el-form-item label="Từ khóa">
+            <el-input v-model="form.Keyword" placeholder="Nhập từ khóa"></el-input>
+          </el-form-item>
+          <el-form-item label="Ngày tạo" style="width: 100%;">
+            <el-date-picker type="daterange" :popper-class="$isMobileDevice ? 'MobileDateRange': ''" placeholder="Ngày tạo" v-model="form.Created"
+                            style="max-width: 100%;"></el-date-picker>
+          </el-form-item>
+          <el-form-item label="Ngày phát hành" style="width: 100%;">
+            <el-date-picker :popper-class="$isMobileDevice ? 'MobileDateRange': ''" type="daterange" placeholder="Ngày phát hành" v-model="form.PublishedDate"
+                            style="max-width: 100%;"></el-date-picker>
+          </el-form-item>
+        </el-form>
+
+      </template>
+    </b-modal>
+  </div>
+</template>
+<script>
+import CreateDocumentForm from "@/components/static/CreateDocumentForm";
+import DocumentTree from "@/components/static/DocumentTree";
+import Download from "@/components/static/Download";
+import PermissionSelector from "@/components/static/PermissionSelector";
+import Pagination from "@/components/dynamic/Pagination";
+
+export default {
+  name: "categories",
+  components: {
+    CreateDocumentForm,
+    DocumentTree,
+    PermissionSelector,
+    Pagination
+  },
+  data() {
+    return {
+      totalP:0,
+      currentP:1,
+      maxItem:10,
+      documentCategoriesTmp:[],
+      projectTmp:[],
+      groupTmp:[],
+      dateTmp:[],
+      completedSignal: 0,
+      currentTab: 0,
+      isCollapse: false,
+      currentUser: this.$rootScope.loggedOnUser,
+      arrPermission: {},
+      tableProps: {
+        "empty-text": "Không có dữ liệu"
+      },
+      searchDef: {
+        inputProps: {
+          placeholder: "Tìm kiếm tài liệu"
+        },
+        colProps: { span: 12 }
+      },
+      listButtons: [],
+      showButton: false,
+      ListField: [],
+      titles: [],
+      dialogVisible: false,
+      activeName: "1",
+      projects: [],
+      years: [],
+      documentCategories: [],
+      documentTypeList: [],
+      groups: [],
+      dates: [],
+      filterTree: [],
+      treeData: [
+        {
+          label: "Phòng ban",
+          objKey: 'GroupId',
+          requestKey: 'Project',
+          outputListKey: 'groups',
+          children: [],
+          type: "group",
+          icon: "icon-people",
+          unread: 0,
+          total: 0,
+          isSynchronized: true
+        },
+        {
+          label: "Danh mục",
+          objKey: 'Id',
+          requestKey: 'SettingCategory',
+          outputListKey: 'documentCategories',
+          children: [],
+          type: "group",
+          icon: "icon-notebook",
+          unread: 0,
+          total: 0,
+          isSynchronized: true
+        },
+        {
+          label: "Dự án",
+          objKey: 'Id',
+          requestKey: 'VersionProject',
+          outputListKey: 'projects',
+          children: [],
+          type: "project",
+          icon: "icon-drawer",
+          unread: 0,
+          total: 0,
+          isSynchronized: true
+        },
+      ],
+      SettingForm: [],
+      options: [],
+      form: {
+        Keyword: "",
+        Created: [],
+        PublishedDate: []
+      },
+      documentList: [],
+      tableData: [],
+      categories: [],
+      projects: [],
+      versionProjects: [],
+      Types: [],
+      inputArr: [],
+    };
+  },
+  methods: {
+    handleSizeChange(val){
+      this.maxItem = val;
+      this.getDocumentToFillTable(this.inputArr, this.treeData[this.currentTab], true)
+    },
+    handleSelectPage (val) {
+      this.currentP = val;
+      this.getDocumentToFillTable(this.inputArr, this.treeData[this.currentTab], true)
+    },
+    shareDocument(item) {
+      this.$hub.$emit(
+        "set-modal-data",
+        "Chia sẻ tài liệu",
+        "80%",
+        true,
+        "left",
+        PermissionSelector,
+        true,
+        "",
+        item.Id
+      );
+    },
+    handleClick(tab, event) {
+      this.$hub.$emit('resetChecked');
+      this.tableData = []
+      this.currentTab = tab.paneName;
+      if(this.treeData[tab.paneName].isSynchronized)
+        this.getBagNumber(this.treeData[tab.paneName], true);
+    },
+    handleNodeClick() {},
+    clearInput() {
+      this.form.Keyword = "";
+      this.form.Created = [];
+      this.form.PublishedDate = [];
+    },
+    searchSetting() {
+      var request = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: 2,
+        R1_RequestTemplate: "SettingNew.SearchSetting",
+        R1_Code: "Form.cap-nhat-tai-lieu.0b27c",
+        R2_RequestTemplate: "SettingNew.SearchSetting",
+        R2_Code: "List.danh-sach-tai-lieu.064hg;"
+      };
+      this.$Utils.post(request).then(response => {
+        var convertIcon = [];
+        convertIcon["icon-delete"] = "fa fa-trash";
+        convertIcon["icon-plus-circle"] = "fa fa-plus-circle";
+        convertIcon["icon-pencil-box"] = "fa fa-pencil";
+        convertIcon["icon-eye"] = "fa fa-eye";
+        convertIcon["icon-briefcase-download"] = "fa fa-download";
+        convertIcon["icon-share ic"] = "fa fa-share";
+        var SettingForm = this.$Utils.getDataWithRoot(
+          response.R2,
+          "Data.DynamicDS.Setting"
+        )[0];
+        if (
+          this.$Utils.isEmpty(SettingForm, "Description") &&
+          this.$Lodash.isString(SettingForm.Description)
+        )
+          SettingForm.Description = JSON.parse(SettingForm.Description);
+        $.each(SettingForm.Description, (fKey, fData)=> {
+          SettingForm[fKey] = fData;
+        });
+        this.SettingForm = SettingForm;
+        var listButtons = this.SettingForm.Description.Buttons;
+        this.completedSignal +=1;
+        $.each(listButtons, (index, button) => {
+          button.Icon = convertIcon[button.Icon];
+          if (button.UserPermissions && button.UserPermissions.length > 0) {
+            button.UserPermissions.forEach(bval => {
+              if (JSON.stringify(this.currentUser.Roles).indexOf(bval) > -1) {
+                button.DisplayPermit = true;
+              }
+            });
+          }
+          var extra = this.$Utils.stringToObject(button.ExtraSetting);
+          $.each(extra, (k, val) => {
+            button[k] = val;
+          });
+        });
+        listButtons = listButtons.filter((el)=> {
+          return el.ButtonDisplayType !== "Insert";
+        });
+        this.listButtons = this.$Lodash.cloneDeep(listButtons);
+
+        var listField = JSON.parse(SettingForm.OF1);
+        this.ListFields = this.$Lodash.cloneDeep(listField);
+        var titles = [];
+
+        $.each(listField, (index, title)=> {
+          if (title.Name !== "Name" && title.Name !== "Tool") {
+            titles.push({
+              prop: title.Name,
+              label: title.Caption
+            });
+          }
+        });
+        this.titles = this.$Lodash.cloneDeep(titles);
+      });
+    },
+    onButtonClick(index, row) {
+      this.excuteButtonClick(this.listButtons[index], row);
+    },
+    checkPermit(button, item) {
+      var case1 = false;
+      var case2 = false;
+        if(button.PermitToShow && this.arrPermission && this.$Utils.isEmpty(this.arrPermission[item.Id], button.PermitToShow)) {
+          if(this.arrPermission[item.Id][button.PermitToShow].indexOf(this.currentUser.UserId) != -1){
+            case1 = true;
+          }else{
+            $.each(this.arrPermission[item.Id][button.PermitToShow],(k, bval) =>{
+
+              if (JSON.stringify(this.currentUser.Roles).indexOf(bval) > -1) {
+                case1 = true;
+                return false;
+              }
+            })
+          }
+        } else if(!button.PermitToShow) {
+          case1 = true;
+        }
+        if ((button.UserPermissions && button.DisplayPermit) || !button.UserPermissions || button.UserPermissions.length == 0) {
+          case2 = true;
+        }
+        return case1 && case2 && this.showButton;
+    },
+    excuteButtonClick(setting, item) {
+      var strLinkType = setting.ButtonType
+        ? setting.ButtonType
+        : setting.ElementType;
+      if (
+        !setting.ButtonType &&
+        setting.ElementType == "Link" &&
+        setting.Redirect
+      ) {
+        strLinkType = "Redirect";
+      }
+      switch (strLinkType) {
+        case "Click":
+          switch (setting.Action) {
+            case "Update":
+              this.excuteUpdate(item, setting);
+              break;
+            case "Delete":
+              this.excuteDelete(item, setting);
+              break;
+            case "ReturnData":
+              break;
+            case "Download":
+              this.excuteDownload(setting, item);
+              break;
+            case "Audio":
+              this.excuteAudio(setting, item);
+              break;
+            case "Call":
+              break;
+            case "Permission":
+              this.shareDocument(item);
+              break;
+          }
+          break;
+        case "Popup":
+          break;
+        case "Redirect":
+          break;
+      }
+    },
+    excuteDownload(button, item) {
+      var vm = this;
+      var binaryDatas = [];
+      var totalCount = 0;
+      var params = {
+        RequestClass: "xBase",
+        RequestAction: "SearchBinary",
+        Parent: item.Id,
+        ConditionFields: "Parent",
+        StaticFields:
+          "Name;Created;Modified;FileName;FileExtension;FileSize;CreatedBy;Description;Parent;FileSize",
+        DynamicFields: "CreatedByName;SignatureVerified"
+      };
+      vm.$Utils.postCheckResult(params).then(data => {
+        binaryDatas = vm.$Utils.getDataWithRoot(data, "Data.DynamicDS.Binary");
+        totalCount = data.TotalCount;
+        this.$hub.$emit(
+          "set-modal-data",
+          "Chia sẻ tài liệu",
+          "80%",
+          true,
+          "left",
+          Download,
+          true,
+          "",
+          binaryDatas
+        );
+      });
+    },
+    excuteDelete(items, setting) {
+      var vm = this;
+      vm
+        .$confirm(
+          "Hành động này không thể hoàn tác. Bạn thực sự muốn xóa bản ghi này?",
+          "Cảnh Báo",
+          {
+            confirmButtonText: "Xóa",
+            cancelButtonText: "Bỏ qua",
+            type: "warning"
+          }
+        )
+        .then(()=> {
+          if (!vm.$Utils.isEmpty(items, "length")) {
+            items = [items];
+          }
+          vm.sendDeleteRequest(items, setting);
+        });
+    },
+    sendDeleteRequest(items, setting) {
+      var vm = this;
+      var request = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: items.length,
+        RequestTemplate: "xDocument_Document.Delete"
+      };
+      $.each(items, (key, item) => {
+        request["R" + (key + 1) + "_Id"] = item.Id;
+        request["R" + (key + 1) + "_DeleteReferenceData"] = item.Id;
+      });
+      /** gửi request xóa*/
+      vm.$Utils.postCheckResult(request).then((result)=> {
+        $.each(items, (key, item) => {
+          var name = item.Name ? item.Name : item.Id;
+          if (result["R" + (key + 1)].success) {
+            vm.$Utils.showMessage("success", "Xóa Thành công");
+            vm.tableData = vm.tableData.filter((el) =>{
+              return el.Id != item.Id;
+            });
+          } else
+            vm.$Utils.showMessage("error", "Có lỗi xảy ra");
+        });
+      });
+    },
+    searchList() {
+      this.getBagNumber(this.treeData[this.currentTab], true);
+      this.$refs["Filter"].hide();
+    },
+    getBagNumber(tab, hasFilter){
+      var inputArr = this.$Lodash.cloneDeep(tab.children);
+      var outputArrKey = tab.outputListKey;
+      var objKey = tab.objKey;
+      var requestKey = tab.requestKey;
+      var req = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: inputArr.length
+      };
+      for (var i = 1; i <= inputArr.length; i++) {
+        req["R" + i + "_RequestTemplate"] = "xDocument_Document.Count";
+        req["R" + i + "_RequestDataGroup"] = "DataGroup.tai-lieu-dung-chung.0cb59";
+        req["R" + i + "_Code"] = "Document";
+        if(requestKey != undefined)
+          req["R" + i + "_"+ requestKey] = inputArr[i - 1][objKey];
+        req["R" + i + '_AssignedUser'] = this.$getItemLocalStorage(this.$localStorageConstant.SessionId);
+        if(hasFilter){
+          $.each(this.form, (key, val) =>{
+            if(val == undefined || val == '' || val == null){}
+            else if (key == "Keyword") req["R" + i + "_" + key] = val;
+            else if (val.length == 2) {
+              req["R" + i + "_" + key + "StartValue"] = this.$Utils.formatDateTime(val[0]);
+              req["R" + i + "_" + key + "EndValue"] = this.$Utils.formatDateTime(val[1],"YYYY-MM-DDT23:59:59");
+            }
+          });
+        }
+      }
+      if(inputArr.length >0)
+        this.$Utils.postCheckResult(req).then(countData => {
+          for (var i = 1; i <= inputArr.length; i++) {
+            inputArr[i-1].total = countData["R" + i].Data;
+          }
+          this[outputArrKey] = inputArr;
+        });
+      else
+        this[outputArrKey] = [];
+    },
+    reloadDataLst(){
+      var vm = this;
+      this.tableData = $.map(vm.documentList, (v) => {
+        var returnItem = {
+          Name: v.Name,
+          FileTypeName: v.FileTypeName?this.mapFileTypeName(v.FileTypeName): '',
+            /*"fa fa-file-" +
+          (v.FileTypeName == "xls" || v.FileTypeName == "xlsx"
+            ? "excel"
+            : v.FileTypeName) +
+          "-o",*/
+          Created: vm.$Utils.formatDateTime(v.Created, "DD/MM/YYYY"),
+          CreatedBy: v.CreatedByName,
+          Category: v.CategoryName,
+          Project: v.ProjectName,
+          VersionProject: v.VersionProjectName,
+          Id: v.Id,
+          btnLst: {},
+        };
+        vm.listButtons.forEach(button=>{
+          returnItem.btnLst[button.Code] = vm.checkPermit(button, {Id: v.Id});
+        });
+        return returnItem;
+      });
+    },
+    mapFileTypeName(data){
+      var result = this.documentTypeList.filter(item => {
+        return item.Name === data;
+      });
+      return result[0].Value;
+    },
+    getDocumentType(){
+      var request = {
+        "RequestClass": "xBase",
+        "RequestAction": "Request",
+        "TotalRequests": 1,
+        "R1_RequestTemplate": "Setting.SearchBase",
+        "R1_ParentCode": "xSetting.Project.Parameter.DocumentView.DocumentType",
+        "SessionId": localStorage.getItem("SessionId")
+      };
+      this.$Utils.post(request).then(data => {
+        this.documentTypeList = this.$Lodash.cloneDeep(this.$Utils.getDataWithRoot(data.R1, "Data.DynamicDS.Setting"));
+      });
+    },
+    searchTreeData(){
+      var request = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: 3,
+        R1_RequestTemplate: "SettingNew.SearchSetting",
+        R1_ParentCode: "xSetting.Project.Parameter.Category",
+        R2_RequestTemplate: "tblGroup.Search",
+        R2_RequestDataGroup: "DataGroup.quan-ly-du-an.053gf",
+        R2_RequestFields: "GroupId;GroupName;Status;GroupType;GroupParent",
+        R2_GroupType: 4,
+        R3_RequestTemplate: "tblGroup.Search",
+        R3_GroupType: 1,
+        R3_RequestDataGroup: "DataGroup.quan-ly-du-an.053gf",
+        R3_RequestFields:  "GroupId;GroupName;GroupType;",
+      };
+
+      if (!this.$isSystemAdmin() && !this.$isMantisAdmin()){
+        request.R3_AssignedUser = this.$getItemLocalStorage(this.$localStorageConstant.SessionId);
+      }
+      this.$Utils.post(request).then(resData => {
+        this.treeData[1].children = this.$Utils.getDataWithRoot(
+          resData.R1,
+          "Data.DynamicDS.Setting"
+        );
+        this.treeData[2].children = this.$Utils.getDataWithRoot(
+          resData.R2,
+          "Data.UserDS.Group"
+        ).map((value)=>{
+          return {
+            Id: value.GroupId,
+            Name: value.GroupName,
+          }
+        });
+        this.treeData[0].children = this.$Utils.getDataWithRoot(
+          resData.R3,
+          "Data.UserDS.Group"
+        );
+        this.getBagNumber(this.treeData[0]);
+      });
+    },
+    getDocumentToFillTable(inputArr, tab, hasFilter){
+      var objKey = tab.objKey;
+      var requestKey = tab.requestKey;
+      var req = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: 2
+      };
+      req["R1_RequestTemplate"] = "xDocument_Document.Search";
+      req["R1_RequestDataGroup"] = "DataGroup.tai-lieu-dung-chung.0cb59";
+      req["R1_Code"] = "Document";
+      req["R1_RequestFields"] = "Id;Tool;Name;Created;CreatedByName;CreatedBy;CategoryName;SettingCategory;Category;ProjectName;Project;" +
+        "VersionProjectName;VersionProject;ModifiedByName;Code;FileTypeName;TypeName;VersionProjectName;PublishedDate;";
+      req["R1_AssignedUser"] = this.$getItemLocalStorage(this.$localStorageConstant.SessionId);
+      req["R1_StartIndex"] = (this.currentP-1) * this.maxItem;
+      req["R1_EndIndex"] = this.currentP * this.maxItem;
+      req["R2_RequestTemplate"] = "xDocument_Document.Count";
+      req["R2_RequestDataGroup"] = "DataGroup.tai-lieu-dung-chung.0cb59";
+      req["R2_Code"] = "Document";
+      req["R2_RequestFields"] = "Id;Code";
+      req["R2_AssignedUser"] = this.$getItemLocalStorage(this.$localStorageConstant.SessionId);
+      if(hasFilter){
+        $.each(this.form, (key, val) =>{
+          if(val == undefined || val == '' || val == null){}
+          else if (key == "Keyword") {
+            req["R1_" + key] = val;
+            req["R2_" + key] = val;
+          }
+          else if (val.length == 2) {
+            req["R1_" + key + "StartValue"] = this.$Utils.formatDateTime(val[0]);
+            req["R1_" + key + "EndValue"] = this.$Utils.formatDateTime(val[1],"YYYY-MM-DDT23:59:59");
+            req["R2_" + key + "StartValue"] = this.$Utils.formatDateTime(val[0]);
+            req["R2_" + key + "EndValue"] = this.$Utils.formatDateTime(val[1],"YYYY-MM-DDT23:59:59");
+          }
+        });
+      }
+      req["R1_"+ requestKey] = '';
+      req["R2_"+ requestKey] = '';
+      for (var i = 0; i < inputArr.length; i++) {
+        req["R1_"+ requestKey] += inputArr[i][objKey] + ';';
+      }
+      req["R2_"+ requestKey] = req["R1_"+ requestKey];
+
+      this.$Utils.postCheckResult(req).then(resultArr => {
+        this.showButton = false;
+        this.documentList = this.$Utils.getDataWithRoot(resultArr["R1"], "Data.DocumentDS.Document");
+        this.totalP = parseInt(resultArr.R2.Data);
+        var paramsSearchLinked = {
+          RequestClass: "xBase",
+          RequestAction: "Request",
+          TotalRequests: this.documentList.length,
+          RequestTemplate: "Permission"
+        };
+        $.each(this.documentList, (key, link) => {
+          this.arrPermission[link.Id] = {};
+          paramsSearchLinked["R" + (key + 1) + "_Parent"] = link.Id;
+        });
+        if(paramsSearchLinked.TotalRequests !== 0){
+          this.$Utils.post(paramsSearchLinked).then(result => {
+            $.each(result, (k, r) => {
+              r = this.$Utils.getDataWithRoot(r, "Data.DataDS.Linked");
+              if (this.$Utils.isEmpty(r) && r.length > 0)
+                $.each(r, (k, value) => {
+                  if (!this.$Utils.isEmpty(this.arrPermission[r[0].Parent][value.Code]))
+                    this.arrPermission[r[0].Parent][value.Code] = [];
+                  this.arrPermission[r[0].Parent][value.Code].push(value.Child);
+                });
+            });
+            this.showButton = true;
+            this.completedSignal +=1;
+          });
+        }
+        else {
+          this.completedSignal +=1;
+        }
+
+
+      });
+    },
+  },
+  watch: {
+    groups: function(newgroups) {
+      var groupsTmp = this.$Utils.createCustomTreeFromList(
+        newgroups,
+        "Id",
+        "ParentId",
+        "children",
+        { GroupName: "label", GroupId: "value" },
+        { type: "group", icon: "icon-folder" }
+      );
+      this.treeData[0].total = 0;
+      $.each(groupsTmp, (key, val)=>{
+        this.treeData[0].total+= parseInt(val.total)
+      })
+      this.treeData[0].children = groupsTmp;
+    },
+    documentCategories: function(newDocumentCategories) {
+      var cates = this.$Utils.createCustomTreeFromList(
+        newDocumentCategories,
+        "Id",
+        "ParentId",
+        "children",
+        { Name: "label", Id: "value" },
+        { type: "category", icon: "icon-folder" }
+      );
+      this.treeData[1].total = 0;
+      $.each(cates, (key, val)=>{
+        this.treeData[1].total+= parseInt(val.total)
+      })
+      this.treeData[1].children = cates;
+    },
+    projects: function(newVal) {
+      var projectsTmp = this.$Utils.createCustomTreeFromList(
+        newVal,
+        "Id",
+        "ParentId",
+        "children",
+        { Name: "label", Id: "value" },
+      );
+      this.treeData[2].children = projectsTmp;
+    },
+    completedSignal: function(after){
+      if(after >= 2){
+        this.reloadDataLst();
+      }
+    },
+  },
+  created() {
+    this.getDocumentType();
+    this.searchSetting();
+    this.$hub.$on("update-document-list", data => {
+      this.inputArr = data;
+      if(data.length ==0){
+        this.tableData = [];
+      }else{
+        this.getDocumentToFillTable(data, this.treeData[this.currentTab])
+      }
+    });
+    this.searchTreeData();
+  },
+  mounted() {
+  },
+  destroyed(){
+    this.$hub.$off('resetChecked');
+  }
+};
+</script>
+<style lang="scss">
+.document-list {
+  .row {
+    margin-right: -10px;
+    margin-left: -10px;
+  }
+  .el-tabs__content{
+    max-height: 78vh;
+    overflow-y: scroll;
+  }
+  .el-table__empty-block, .el-table__body-wrapper{
+    height: 79vh !important;
+  }
+  @media screen and (max-width: 599px) {
+    @media screen and (max-width: 375px){
+      .el-table__empty-block, .el-table__body-wrapper{
+        height: 76vh !important;
+      }
+    }
+    .el-table__empty-block, .el-table__body-wrapper{
+      height: 78vh !important;
+    }
+  }
+  .el-tabs__nav-wrap.is-scrollable {
+    padding: 0px 10px;
+  }
+  .el-tabs__item{
+    padding: 0px 10px;
+  }
+  .search {
+    width: 222px;
+  }
+  .sc-table .tool-bar {
+    margin: 3px 0px 3px 0px;
+  }
+  .el-tabs__header {
+    margin: 0;
+  }
+  #Filter {
+    height: 100%;
+    .modal-dialog {
+      position: fixed;
+      right: 0px;
+      margin: 0px;
+      height: 100%;
+      .modal-content {
+        height: 100%;
+      }
+    }
+  }
+
+  .title-box {
+    background-color: #f0f3f5;
+    border: 1px solid #c2cfd6;
+  }
+
+  .createDocument {
+    .el-dialog__header {
+      text-align: left;
+      background-color: #5090c1;
+      .el-dialog__title {
+        color: #fff;
+      }
+    }
+
+    .el-dialog__footer {
+      text-align: right;
+    }
+
+    .el-dialog__headerbtn {
+      .el-dialog__close {
+        color: #fff;
+      }
+    }
+  }
+
+  .el-aside {
+    color: #333;
+  }
+
+  .border-box {
+    border: 1px solid lightgray;
+  }
+
+  .my-row {
+    .col-md-9 {
+      padding: 0px !important;
+    }
+  }
+
+  .my-header {
+    display: flex;
+    justify-content: space-between;
+    background-color: #f0f3f5;
+    /*border: 1px solid #c2cfd6;*/
+    padding: 0 10px 3px 10px;
+    cursor: pointer;
+  }
+}
+</style>

@@ -1,0 +1,174 @@
+{
+  "project_info": {
+    "project_number": "68497599090",
+    "firebase_url": "https://bos-edu-vn.firebaseio.com",
+    "project_id": "bos-edu-vn",
+    "storage_bucket": "bos-edu-vn.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68497599090:android:52198798138b6056",
+        "android_client_info": {
+          "package_name": "bos.com.home"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "68497599090-fjn4sc59aeivgcf90h3hr9874nc0gtn3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "bos.com.home",
+            "certificate_hash": "25e5e21bbff2465c5a609b37460990c2652daca2"
+          }
+        },
+        {
+          "client_id": "68497599090-mt66grcb5vqtmh24av0bp5hhnf44h5b7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWM7aFPQm73gim1Y-8Qc0VxtsmAPHjoX8"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "68497599090-mt66grcb5vqtmh24av0bp5hhnf44h5b7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68497599090:android:f72aad3412d784f6",
+        "android_client_info": {
+          "package_name": "info.androidhive.firebasenotifications"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "68497599090-s4u20g9cro1jchvnth3d4okuisj0n59a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "info.androidhive.firebasenotifications",
+            "certificate_hash": "25e5e21bbff2465c5a609b37460990c2652daca2"
+          }
+        },
+        {
+          "client_id": "68497599090-mt66grcb5vqtmh24av0bp5hhnf44h5b7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWM7aFPQm73gim1Y-8Qc0VxtsmAPHjoX8"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "68497599090-mt66grcb5vqtmh24av0bp5hhnf44h5b7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68497599090:android:7b99b08d9b2fdca4",
+        "android_client_info": {
+          "package_name": "enterprise.mantis.vn"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "68497599090-ile2kaie3bjm5ungjqe779uv2sfugqqv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "enterprise.mantis.vn",
+            "certificate_hash": "25e5e21bbff2465c5a609b37460990c2652daca2"
+          }
+        },
+        {
+          "client_id": "68497599090-mt66grcb5vqtmh24av0bp5hhnf44h5b7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWM7aFPQm73gim1Y-8Qc0VxtsmAPHjoX8"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "68497599090-mt66grcb5vqtmh24av0bp5hhnf44h5b7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68497599090:android:db59a32a8b5c044a",
+        "android_client_info": {
+          "package_name": "mobile.mantis.vn"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "68497599090-mt66grcb5vqtmh24av0bp5hhnf44h5b7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWM7aFPQm73gim1Y-8Qc0VxtsmAPHjoX8"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

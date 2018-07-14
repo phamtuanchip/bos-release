@@ -1,0 +1,392 @@
+<template>
+  <div>
+    <el-container direction="vertical">
+      <el-row><span><b> Theo phòng ban </b></span></el-row>
+      <el-row>
+        <CustomizableTable v-if="colorLoaded" :tblData="tableData" :colors = "colors"></CustomizableTable>
+      </el-row>
+    </el-container>
+  </div>
+</template>
+
+<script>
+    import CustomizableTable from "../CustomizableTable";
+    export default {
+      inject: ["loadAvatar"],
+      name: "TaskSummaryTable",
+      components: {CustomizableTable},
+      methods : {
+        getDeptEmpTableData () {
+          var taskRequest = {
+            RequestClass: "xBase",
+            RequestAction: "Request",
+            TotalRequests: 1,
+            R1_RequestTemplate: "AG_Task_Task.Search",
+            R1_RequestDataGroup: "DataGroup.danh-sach-cong-viec.04b66",
+            R1_RequestFields: "Id;Status;Deadline;Project;ProjectName;Worker;WorkerName",
+            R1_Project: this.currentDept,
+            R1_DeadlineStartValue: '2017-01-01T00:00:00',
+            R1_DeadlineEndValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[0]),
+            R1_Status: 'db8e700c-78c6-4f35-9477-36e0335888f5;fab4fa55-cf1d-4625-8f65-8b43e832061b;05625d94-3884-4f00-9918-254c1216c6cd;' +
+              '5756c3d9-37a8-4032-bd6c-2a01161b73c7;bbc399a9-a2b4-45ad-b948-32e5623dc021',
+          };
+
+          this.$Utils.post(taskRequest).then(taskdata => {
+            var taskList = this.$Utils.getDataWithRoot(taskdata,"R1.Data.TasksDS.Task");
+            taskList.forEach(item=> {
+              if (!this.tasksObject[item.Project]) {
+                this.tasksObject[item.Project] = {
+                  Category: item.Project,
+                  Lead: item.ProjectName,
+                  LeadAuthor: item.ProjectName,
+                  TotalAttachments: 0,
+                  TotalComments: 0,
+                  TotalDownloads: 0,
+                  TotalPages: 0,
+                  TotalRatingPoints: 0,
+                  TotalRatings: 0,
+                  BeforeTotalPages: 0,
+                  TotalReadingTimes: 0,
+                  Priority: 0,
+                  State: 0,
+                  children: {},
+                }
+              }
+              if(!this.tasksObject[item.Project].children[item.Worker+';'+item.Project]){
+                this.tasksObject[item.Project].children[item.Worker+';'+item.Project] = {
+                  Category: item.Category,
+                  Lead: item.Lead,
+                  Author: item.Worker,
+                  LeadAuthor: item.WorkerName,
+                  TotalAttachments: 0,
+                  TotalComments: 0,
+                  TotalDownloads: 0,
+                  TotalPages: 0,
+                  TotalRatingPoints: 0,
+                  TotalRatings: 0,
+                  BeforeTotalPages: 0,
+                  TotalReadingTimes: 0,
+                  Priority: 0,
+                  State: 1,
+                  Avatar : this.loadAvatar(this.userAvatars[item.Worker].Avatar)
+                }
+              }
+              this.tasksObject[item.Project].BeforeTotalPages++;
+              this.tasksObject[item.Project].children[item.Worker+';'+item.Project].BeforeTotalPages++;
+            });
+            this.signal ++;
+          });
+          //
+          //
+          var req = {
+            RequestClass: "xBase",
+            RequestAction: "Request",
+            TotalRequests: 1,
+            R1_RequestTemplate: "xDocument_Document.Search",
+            R1_RequestDataGroup: "DataGroup.tasksummary.0d2g9",
+            R1_Code: "TaskSummary",
+            // R1_Category: this.currentDept,
+            R1_RequestFields: "Id;Category;Code;Lead;TotalAttachments;TotalComments;TotalDownloads;TotalPages;TotalRatingPoints;TotalRatings;DisplayDate;State;TotalReadingTimes;Priority;",
+            R1_DisplayDateStartValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[0]),
+            R1_DisplayDateEndValue: this.$Utils.formatDateTime(this.$rootScope.dateFilter[1]),
+          };
+
+          this.$Utils.post(req).then(response => {
+            var tmp = this.$Utils.getDataWithRoot(response.R1, 'Data.DocumentDS.Document');
+            tmp.forEach(item=> {
+              if(item.State === 0){
+                if(!this.tasksObject[item.Category]){
+                  this.tasksObject[item.Category] = {
+                    Category: item.Category,
+                    Lead: item.Lead,
+                    LeadAuthor: item.Lead,
+                    TotalAttachments: 0,
+                    TotalComments: 0,
+                    TotalDownloads: 0,
+                    TotalPages: 0,
+                    TotalRatingPoints: 0,
+                    TotalRatings: 0,
+                    BeforeTotalPages: 0,
+                    TotalReadingTimes: 0,
+                    Priority: 0,
+                    State: 0,
+                    children: {},
+                  }
+                }
+                this.tasksObject[item.Category].TotalAttachments+= isNaN(parseInt(item.TotalAttachments))?0:parseInt(item.TotalAttachments);
+                this.tasksObject[item.Category].TotalComments+=isNaN(parseInt(item.TotalComments))?0:parseInt(item.TotalComments);
+                this.tasksObject[item.Category].TotalDownloads+=isNaN(parseInt(item.TotalDownloads))?0:parseInt(item.TotalDownloads);
+                this.tasksObject[item.Category].TotalPages+=isNaN(parseInt(item.TotalPages))?0:parseInt(item.TotalPages);
+                this.tasksObject[item.Category].TotalRatingPoints+=isNaN(parseInt(item.TotalRatingPoints))?0:parseInt(item.TotalRatingPoints);
+                this.tasksObject[item.Category].TotalRatings+=isNaN(parseInt(item.TotalRatings))?0:parseInt(item.TotalRatings);
+                this.tasksObject[item.Category].TotalReadingTimes+=isNaN(parseInt(item.TotalReadingTimes))?0:parseInt(item.TotalReadingTimes);
+                this.tasksObject[item.Category].Priority+=isNaN(parseInt(item.Priority))?0:parseInt(item.Priority);
+              } else  if(item.State === 1){
+                if(!this.tasksObject[item.Category].children[item.DisplayImage+';'+item.Category]){
+                  this.tasksObject[item.Category].children[item.DisplayImage] = {
+                    Category: item.Category,
+                    Lead: item.Lead,
+                    Author: item.Author,
+                    LeadAuthor: item.Author,
+                    DisplayImage: item.DisplayImage,
+                    TotalAttachments: 0,
+                    TotalComments: 0,
+                    TotalDownloads: 0,
+                    TotalPages: 0,
+                    TotalRatingPoints: 0,
+                    TotalRatings: 0,
+                    BeforeTotalPages: 0,
+                    TotalReadingTimes: 0,
+                    Priority: 0,
+                    State: 1,
+                  }
+                }
+                this.tasksObject[item.Category].children[element.DisplayImage].TotalAttachments+= isNaN(parseInt(element.TotalAttachments))?0:parseInt(element.TotalAttachments);
+                this.tasksObject[item.Category].children[element.DisplayImage].TotalComments+=isNaN(parseInt(element.TotalComments))?0:parseInt(element.TotalComments);
+                this.tasksObject[item.Category].children[element.DisplayImage].TotalDownloads+=isNaN(parseInt(element.TotalDownloads))?0:parseInt(element.TotalDownloads);
+                this.tasksObject[item.Category].children[element.DisplayImage].TotalPages+=isNaN(parseInt(element.TotalPages))?0:parseInt(element.TotalPages);
+                this.tasksObject[item.Category].children[element.DisplayImage].TotalRatingPoints+=isNaN(parseInt(element.TotalRatingPoints))?0:parseInt(element.TotalRatingPoints);
+                this.tasksObject[item.Category].children[element.DisplayImage].TotalRatings+=isNaN(parseInt(element.TotalRatings))?0:parseInt(element.TotalRatings);
+                this.tasksObject[item.Category].children[element.DisplayImage].TotalReadingTimes+=isNaN(parseInt(element.TotalReadingTimes))?0:parseInt(element.TotalReadingTimes);
+                this.tasksObject[item.Category].children[element.DisplayImage].Priority+=isNaN(parseInt(element.Priority))?0:parseInt(element.Priority);
+              }
+            });
+            this.signal ++;
+          });
+
+        },
+        getColorSettings () {
+          var request = {
+            RequestClass: 'xBase',
+            RequestAction: 'Request',
+            TotalRequests: 1,
+            R1_RequestTemplate: 'SettingNew.SearchSetting',
+            R1_IncludedNestedSetParent: false,
+            R1_ParentCode: 'xSetting.Project.Parameter.TaskSummaryTable.Color'
+          }
+          this.$Utils.postCheckResult(request).then((data)=> {
+            data = this.$Utils.getDataWithRoot(data.R1, 'Data.DynamicDS.Setting');
+            var colors = this.$Utils.treeify(data, 'Id', 'ParentId')
+            this.colors = this.$Utils.rotateDementionArr(colors, 'Code')
+            this.colorLoaded = true;
+          });
+        },
+        colorifyText (row, column) {
+          try {
+            var returnCols = ""
+            var cols = this.colors['TaskSummaryTable.Color.' + column.name];
+            if(cols ==undefined)
+              return '';
+            $.each(cols.children, (k, val) => {
+              var arr = val.Code.split('to');
+              if(parseInt(arr[0]) <= row[column.name] && row[column.name] <= parseInt(arr[1])){
+                returnCols = val.Color;
+                return false
+              }
+            });
+            return returnCols;
+          }catch (e) {
+            return '';
+          }
+
+        },
+        rowColorify ({row, rowIndex}) {
+          if(row.State == 0)
+            return {'background-color': 'rgb(169, 162, 162)'};
+          else
+            return "";
+        },
+        getAvatar(){
+          var requestGroup = {
+            RequestAction: "SearchUserWithGroups",
+            IncludedGroupManager: "true",
+            RequestClass: "BPM",
+            RequestDataType: "json",
+            StaticFields: "UserId;",
+            DynamicFields: "Avatar;",
+          };
+          this.$Utils.post(requestGroup).then(data => {
+            data = this.$Utils.getDataWithRoot(data, "Data.UserDS.User");
+            data = this.$Lodash.filter(
+              data,u => {
+                return u.LoginName != "superadmin";
+              }
+            );
+            this.userAvatars = this.$Lodash.keyBy(
+              data,
+              "UserId"
+            );
+          });
+        }
+      },
+      watch :{
+        signal (newVal) {
+          if(newVal==2){
+            Object.values(this.tasksObject).forEach(item => {
+              var tmp = this.$Lodash.cloneDeep(item);
+              delete tmp.children;
+              this.tableData.cellData.push(tmp);
+              this.cachedTableData.push(tmp);
+              this.tableData.cellData = this.tableData.cellData.concat(Object.values(item.children));
+              this.cachedTableData = this.tableData.cellData.concat(Object.values(item.children));
+            })
+            this.signal = 0;
+            this.tasksObject = {};
+          }
+        }
+      },
+      created () {
+        this.getAvatar();
+        this.currentDept = this.$rootScope.selectedGroupId;
+        this.getColorSettings ();
+        if(this.$isMantisAdmin() || this.$isSystemAdmin()){
+          this.currentUser.departments = "";
+          this.currentDept = this.$rootScope.selectedGroupId?this.$rootScope.selectedGroupId:"" ;
+        } else {
+          var request = {
+            RequestClass: 'xBase',
+            RequestAction: 'Request',
+            TotalRequests: 1,
+            R1_RequestTemplate: 'tblGroup.Search',
+            R1_RequestDataGroup: 'DataGroup.quan-ly-du-an.053gf',
+            R1_RequestFields: 'GroupId;GroupName;GroupType;Status',
+            R1_GroupType: 1,
+            R1_Status: 1,
+            R1_AssignedUser: this.$getItemLocalStorage(this.$localStorageConstant.SessionId),
+          }
+          this.$Utils.postCheckResult(request).then((data) => {
+            data = this.$Utils.getDataWithRoot(data.R1, 'Data.UserDS.Group');
+            this.currentUser.departments = ""
+            data.forEach(item=>{
+              this.currentUser.departments +=item.GroupId+";";
+            });
+          });
+        }
+        this.getDeptEmpTableData();
+        this.$hub.$on("groupPicked", data => {
+          if (!data || data.length == 0 || (data.length == 1 && data[0].indexOf(";") > -1)) {
+            this.tableData.cellData = this.cachedTableData;
+          } else {
+            this.tableData.cellData = this.cachedTableData.filter(item => {
+              if (item.State == 0) {
+                return data.indexOf(item.Category) > -1;
+              }
+              else {
+                return data.indexOf(item.Author) > -1 && data.indexOf(item.Category) > -1;
+              }
+            })
+          }
+        });
+
+        this.currentWeek.monday  = this.$rootScope.dateFilter[0];
+        this.currentWeek.sunday = this.$rootScope.dateFilter[1];
+        this.$hub.$on("datePicked", data => {
+          if(this.currentDept !== undefined) {
+            if(this.$Utils.formatDateTime(data[0], 'YYYYMMDD')==this.$Utils.formatDateTime(this.currentWeek.monday, 'YYYYMMDD') &&
+              this.$Utils.formatDateTime(data[1], 'YYYYMMDD')==this.$Utils.formatDateTime(this.currentWeek.sunday, 'YYYYMMDD')){
+              this.tableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong tuần";
+                  return false;
+                }
+              })
+              //
+              this.tableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong tuần";
+                  return false;
+                }
+              })
+            }else{
+              this.tableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong thời gian lọc"
+                  return false;
+                }
+              })
+              //
+              this.tableData.columns.forEach(col => {
+                if(col.name == 'TotalPages'){
+                  col.label = "Quá hạn trong thời gian lọc"
+                  return false;
+                }
+              })
+            }
+            this.getDeptEmpTableData();
+          }
+        });
+        this.$hub.$on("workerPicked", data => {
+          if(this.currentDept !== undefined) {
+            if(!data || data.length ==0 || (data.length == 1 && data[0].indexOf(";")>-1)){
+              this.tableData.cellData = this.cachedTableData;
+            }else{
+              this.tableData.cellData = this.cachedTableData.filter(item => {
+                if(item.State==0){
+                  return true;
+                }
+                else {
+                  return data.indexOf(item.Author) >-1;
+                }
+              })
+            }
+
+          }
+        });
+        this.$hub.$on("columnClicked", data => {
+        });
+      },
+      destroyed () {
+        // this.$hub.$off('columnClicked');
+        this.$hub.$off('groupPicked');
+        this.$hub.$off('workerPicked');
+        this.$hub.$off('datePicked');
+      },
+      data () {
+          return {
+            signal: 0,
+            userAvatars: {},
+            tasksObject: {},
+            currentWeek: {
+              monday : '',
+              sunday : '',
+            },
+            cachedTableData: [],
+            colorLoaded: false,
+            isShowEmpTable: false,
+            currentUser:JSON.parse(this.$getItemLocalStorage(this.$localStorageConstant.LoggedOnUser)),
+            selectedGroupIds: "",
+            listDepartments: [],
+            currentDept: undefined,
+            tableData : {
+              tblName: 'deptEmpTbl',
+              rowColorify: this.rowColorify,
+              colorifyText: this.colorifyText,
+              hasMultiSelect: false,
+              stripe: false,
+              hasIndex: false,
+              border: true,
+              fit: false,
+              width: "100%",
+              cellData: [
+              ],
+              columns: [
+                { label: "Phòng ban/ Nhân sự", name: "LeadAuthor", fixed: true, width: 250, img:'Avatar', imgStyle: 'width:42px; height:42px; border-radius: 50em;'},
+                { label: "Xem", name: "Priority", fixed: false, width: 'auto'},
+                { label: "Bình luận", name: "TotalRatingPoints", fixed: false, width: 'auto'},
+                { label: "Trao đổi", name: "TotalReadingTimes", fixed: false, width: 'auto'},
+                { label: "Cập nhật", name: "TotalRatings", fixed: false, width: 'auto'},
+                { label: "Tạo mới", name: "TotalAttachments", fixed: false, width: 'auto'},
+                { label: "Hoàn thành", name: "TotalComments", fixed: false, width: 'auto'},
+                { label: "Chuyển trạng thái", name: "TotalDownloads", fixed: false, width: 'auto'},
+                { label: "Quá hạn trong tuần", name: "TotalPages", fixed: false, width: 'auto'},
+                { label: "Quá hạn từ trước", name: "BeforeTotalPages", fixed: false, width: 'auto'},
+              ],
+            },
+            colors : {}
+          }
+      }
+    }
+</script>
+
+<style scoped>
+</style>

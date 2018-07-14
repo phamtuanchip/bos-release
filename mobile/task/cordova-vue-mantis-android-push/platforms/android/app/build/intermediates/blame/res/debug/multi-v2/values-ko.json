@@ -1,0 +1,60 @@
+{
+    "logs": [
+        {
+            "outputFile": "/Users/yuukininomae/Sites/bos-mobile/cordova-vue-mantis-android-push/platforms/android/app/build/intermediates/incremental/mergeDebugResources/merged.dir/values-ko/values-ko.xml",
+            "map": [
+                {
+                    "source": "/Users/yuukininomae/.gradle/caches/transforms-1/files-1.1/firebase-messaging-11.6.2.aar/ed44b9af6ddd60b7faceea1d04b5bacd/res/values-ko/values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "243",
+                        "endColumns": "96",
+                        "endOffsets": "339"
+                    },
+                    "to": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "285",
+                        "endColumns": "100",
+                        "endOffsets": "381"
+                    }
+                },
+                {
+                    "source": "/Users/yuukininomae/.gradle/caches/transforms-1/files-1.1/play-services-basement-11.6.2.aar/5ab71a8256d625531acdc3f01ab11a54/res/values-ko/values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "285",
+                        "endColumns": "179",
+                        "endOffsets": "464"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "105",
+                        "endColumns": "179",
+                        "endOffsets": "280"
+                    }
+                },
+                {
+                    "source": "/Users/yuukininomae/.gradle/caches/transforms-1/files-1.1/support-compat-26.1.0.aar/3bd837619c84122261b2e887c95fa0db/res/values-ko/values-ko.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "4",
+                        "startColumns": "4",
+                        "startOffsets": "386",
+                        "endColumns": "100",
+                        "endOffsets": "482"
+                    }
+                }
+            ]
+        }
+    ]
+}

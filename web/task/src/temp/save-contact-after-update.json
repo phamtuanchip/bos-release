@@ -1,0 +1,49 @@
+{
+	"AfterUpdate": "Calculator",
+	"Expression": {
+		"R": "2",
+		"Fields": "TotalContact;TotalInteractiveSale;TotalCare;TotalPurchases;TotalRevenueBeforeDiscount;TotalDiscount;TotalRevenueAfterDiscount;TotalNetRevenue",
+		"R1": {
+			"Fields": "TotalProduct;TotalIncome;LastOrderDate;",
+			"RequestTemplate": "xProfile_Profile",
+			"RequestDataGroup": "DataGroup.contact.82fhd",
+			"Code": "Contact",
+			"RequestFields": "Id;Code;",
+			"DataSource": "Data.ProfileDS.Profile",
+			"Id": "DocumentForm",
+			"SearchField": "Id",
+			"UsedField": "Code",
+			"Count": {},
+			"Sum": {
+				"ProductCount": "TotalProduct",
+				"Price": "TotalIncome"
+			},
+			"Sync": {
+				"Created": "LastOrderDate"
+			}
+		},
+		"R2": {
+			"Fields": "TotalOrder;TotalProduct;TotalIncomePerActivity;",
+			"RequestDataGroup": "DataGroup.lead.9jwnc",
+			"RequestTemplate": "xDocument_Document",
+			"Code": "Lead",
+			"RequestFields": "Id;Code;",
+			"DataSource": "Data.DocumentDS.Document",
+			"Id": "DocumentField",
+			"SearchField": "Id",
+			"UsedField": "Code",
+			"Count": {
+				"DocumentField": "TotalOrder"
+			},
+			"Sum": {
+				"ProductCount": "TotalProduct||Status=be311afe-985d-4f79-8e89-c895a4ff0694",
+				"Price": "TotalIncomePerActivity||Status=be311afe-985d-4f79-8e89-c895a4ff0694"
+			},
+			"Sync": {}
+		},
+		"Count": "",
+		"Sum": "",
+		"Sync": ""
+	},
+	"AfterAction": "ClearValue"
+}

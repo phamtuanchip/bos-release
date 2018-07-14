@@ -1,0 +1,131 @@
+<template>
+  <div class="dailyTable">
+    <el-table border
+              :id="id"
+              :data="tblData"
+              style="width: 100%;"
+              :show-summary="!isHideSummary"
+              sum-text="Tổng"
+              empty-text="Không có dữ liệu">
+    <el-table-column v-if="isShowIndex" type="index" label="Stt"></el-table-column>
+    <el-table-column prop="Index" label="Mã" width="65">
+      <template slot-scope="scope">
+
+        <router-link :to="'/dynamic/view/Index='+scope.row.Index">
+          <span
+            :style="'color:red;text-decoration:' + (taskDone.indexOf(scope.row.Status) >-1 ? 'line-through' : '')">
+           {{scope.row.Index}}
+           </span>
+          <i v-if="scope.row.PriorityId && $isMobileDevice"
+             :class="'fa ' + listPriority[scope.row.PriorityId].Value + ' pl-2'"></i>
+          <i v-if="$isMobileDevice" class="fa fa-clock-o"
+             :style="'color:' + (parseFloat(overHours(scope.row)+ '')<0?'red':'blue')"></i>
+          <i v-if="scope.row.TotalDownload" class="fa fa-paperclip">{{scope.row.TotalDownload}}</i>
+          <i v-if="scope.row.TotalComment" class="fa fa-comments-o">{{scope.row.TotalComment}}</i>
+          <i v-if="checkReadUnread && checkReadItem(scope.row)" class="fa fa-envelope-o"></i>           
+          <i v-if="scope.row.UserList"  class="fa fa-eye" >{{totalView(scope.row.UserList)}}</i>             
+        </router-link>
+      </template>
+    </el-table-column>
+    <el-table-column label="Tên công việc" min-width="200">
+      <template slot-scope="scope">
+        <router-link :to="'/dynamic/view/Index='+scope.row.Index">
+          <span :class="(checkReadUnread && checkReadItem(scope.row)) ? 'Unread' : ''"
+                :style="'text-decoration:' + (taskDone.indexOf(scope.row.Status) >-1 ? 'line-through' : '')">
+            {{scope.row.Name}}
+          </span>
+        </router-link>
+      </template>
+    </el-table-column>
+    <el-table-column label="Trạng thái">
+      <template slot-scope="scope">
+        <div class="text-center"
+             :style="'margin:0px; background-color:' + statusColors[scope.row.Status.toUpperCase()]">
+          {{scope.row.StatusName}}
+        </div>
+      </template>
+    </el-table-column>
+
+    <el-table-column prop="PlanManHour" label="Ước tính"/>
+
+    <el-table-column prop="RemainingManHour" label="Thực tế"/>
+    <el-table-column label="Quá hạn">
+      <template slot-scope="scope">
+        <i class="fa fa-clock-o" :style="'color:' + (parseFloat(overHours(scope.row)+ '')<0?'red':'blue')"></i>
+        <span> {{overHours(scope.row)}}</span>
+      </template>
+    </el-table-column>
+
+    <el-table-column label="Ngày thực hiện">
+      <template slot-scope="scope">
+        <span style="text-align: center"> {{$Utils.formatDateTime(scope.row.PlanStartDate, 'DD/MM/YYYY HH:mm')}} </span>
+      </template>
+    </el-table-column>
+    <el-table-column label="Ngày kết thúc">
+      <template slot-scope="scope">
+        <span style="text-align: center"> {{$Utils.formatDateTime(scope.row.Deadline, 'DD/MM/YYYY HH:mm')}} </span>
+      </template>
+    </el-table-column>
+    <el-table-column label="Ưu tiên">
+      <template slot-scope="scope">
+        <div class="text-center"
+             :style="'margin:0px; background-color:' + priorityColors[scope.row.PriorityId.toUpperCase()]">
+          {{scope.row.PriorityIdName}}
+        </div>
+      </template>
+    </el-table-column>
+    <el-table-column v-if="$isMantisAdmin() || $isSystemAdmin()" prop="WorkerName" label="Thực hiện"/>
+    <el-table-column prop="TypeName" label="Tính chất"/>
+  </el-table>
+    <!--<div class="text-center">Không có dữ liệu</div>-->
+  </div>
+</template>
+
+<script>
+import Vue from "vue";
+import vuedragscroll from "vue-dragscroll";
+
+Vue.use(vuedragscroll);
+Vue.use(require("vue-moment"));
+
+export default {
+  inject: [
+    "statusColors",
+    "priorityColors",
+    "taskDone",
+    "overHours",
+    "listPriority",
+    "loggedUser",
+    "totalView"
+  ],
+  props: ["tblData", "id", "isShowIndex", "checkReadUnread", "isHideSummary"],
+
+  methods: {
+    // getSummary(obj){
+    //   obj.columns = obj.columns.filter(ele => {
+    //     return ele.property != 'Index'
+    //   })
+    //   return obj
+    // },
+    checkReadItem(item) {
+      return (
+        !item.Marked &&
+        (!item.UserList || item.UserList.indexOf(this.loggedUser.UserId) == -1)
+      );
+    }
+  }
+};
+</script>
+<style lang="scss">
+.dailyTable {
+  .Unread {
+    font-weight: bold;
+  }
+
+  /*    .el-table__body-wrapper {
+      max-height: 350px;
+    }*/
+}
+</style>
+
+

@@ -1,0 +1,348 @@
+<template>
+  <div class="show-task-detail">
+    <el-row>
+       <el-col :span="22"><strong>Công việc: {{task.Name}}</strong></el-col>
+        <el-col :span="2">
+        <el-button  icon="el-icon-edit" @click="showTaskDetail">
+        </el-button>
+        </el-col>
+    </el-row>
+      <el-tabs v-model="activeName">
+         <el-tab-pane label="Thông tin" name="0">
+          <div>            
+            <div><i class="mr-1 fa fa-calendar-times-o" aria-hidden="true"></i><span>Bắt đầu:</span> {{!data.dataToPass ? formatDate(task.PlanStartDate) : task.PlanStartDate}}</div>
+            <div><i class="mr-1 fa fa-calendar-check-o" aria-hidden="true"></i><span>Kết thúc:</span> {{!data.dataToPass ? formatDate(task.Deadline) : task.Deadline}}</div>
+            <div><i class="mr-1 fa fa-calendar-minus-o" aria-hidden="true"></i><span>Ước tính: {{task.PlanManHour}}</span></div>
+            <div><i class="mr-1 fa fa-clock-o" aria-hidden="true"></i><span>Thực tế: {{task.RemainingManHour}}</span></div>
+            <div><i class="mr-1 fa fa-clock-o" aria-hidden="true"></i><span>Còn lại: {{task.RestTime}}</span></div>
+            <div><i class="mr-1 fa fa-window-restore" aria-hidden="true"></i><span>Trạng thái: {{task.StatusName}}</span></div>
+            <div><i class="mr-1 fa fa-user" aria-hidden="true"></i><span>Nhân viên: {{task.WorkerName}}</span></div>
+            <div><i class="mr-1 fa fa-user-secret" aria-hidden="true"></i><span>Giám sát: {{task.ManagerName}}</span></div>
+            <div v-if="task.SeenList && task.SeenList.length > 1"><i class="mr-1 fa fa-eye" aria-hidden="true"></i><span>Đã xem bởi: <span v-for="(item, key) in task.SeenList" v-if="task.SeenList && key != 0 && getUserInfo(item, 'Avatar')">
+              <el-tooltip class="item" effect="dark" :content="getUserInfo(item, 'Username') + '(' + getUserInfo(item, 'LoginName') + ')'" placement="top-start">
+                <img :src="loadAvatar(getUserInfo(item, 'Avatar'))" class="round-image"/>
+              </el-tooltip>
+            </span></span></div>
+            <div><i class="mr-1 fa fa-align-justify" aria-hidden="true"></i><span>Chi tiết:</span>  <span v-html="$Utils.decodeHtmlEntities(task.Content)"></span></div>
+                <!-- <el-col :xs="4" :md="2" class="cellTable">
+                  <div class="content">
+                    <img :src="item.Avatar" class="round-image"/>
+                  </div>
+                </el-col> -->
+          </div>
+        </el-tab-pane>
+         <el-tab-pane label="Thảo luận" name="1">
+          <Comment :parent="data.dataToPass ? task : data" :idSetting="SettingForm" />
+       </el-tab-pane>
+      </el-tabs>
+  </div>
+</template>
+<script>
+import Vue from "vue";
+import UploadFile from "@/components/static/UploadFile";
+import Comment from "@/components/dynamic/Comment";
+import DynamicPage from "@/components/dynamic/DynamicPage";
+export default {
+  name: "Showtaskdetails",
+  props: ["data"],
+  components: {
+    UploadFile,
+    Comment
+  },
+  data() {
+    return {
+      activeName: "0",
+      task: {},
+      SettingForm: [],
+      ListUserInfo: {},
+    };
+  },
+  created() {
+    var ctrl = this;
+    ctrl.searchUser();
+    if (ctrl.$Utils.isEmpty(ctrl.data, "dataToPass")) {
+      ctrl.task = ctrl.data.dataToPass;
+      ctrl.saveUserList(ctrl.task);
+      ctrl.$forceUpdate();
+    } else {
+      //ctrl.task = ctrl.data;
+      var request = ctrl.$Lodash.cloneDeep(ctrl.$singleRequest);
+      request.RequestClass = "xBase";
+      request.RequestAction = "Request";
+      request.TotalRequests = 1;
+      request.R1_RequestTemplate = "AG_Task_Task.Search";
+      request.R1_RequestDataGroup = "DataGroup.danh-sach-cong-viec.04b66";
+      request.R1_RequestFields =
+        "Id;Name;Index;ActualStartDate;ActualFinishDate;PlanStartDate;Deadline;StatusName;WorkerName;Content;" +
+        "ManagerName;PlanManHour;RemainingManHour;RestTime;VersionProject;Action;Categories;CategoryProjectLevel1;" +
+        "CategoryProjectLevel2;CategoryProjectLevel3;ChosenOne;Code;CreatedBy;GroupRoot;Manager;Milestone;" +
+        "ModifiedBy;PriorityId;Project;ProjectType;Quality;Status;TaskQualityResult;TaskRequest;TaskResult;" +
+        "TaskState;TotalComment;TotalDownload;Type;Version;Worker;TagName;StatusDisplayName;SeverityName;" +
+        "VersionProjectName;CategoriesLevel1;CategoriesLevel2;CategoriesLevel3;CategoriesLevel4;TargetsLevel1;" +
+        "TargetsLevel2;TargetsLevel3;TargetsLevel4;TargetsName;ProjectCategoriesLevel1;ProjectCategoriesName;" +
+        "ProjectCategoriesLevel2;ProjectCategoriesLevel3;UserList;";
+      request.R1_Id = ctrl.data.Id;
+      ctrl.$Utils.postCheckResult(request).then(data => {
+        data = ctrl.$Utils.getDataWithRoot(data.R1, "Data.TasksDS.Task");
+        ctrl.task = ctrl.$Lodash.cloneDeep(data[0]);
+        ctrl.task.SeenList = ctrl.$Utils.jsonParse(ctrl.task.UserList)
+        ctrl.saveUserList(ctrl.task);
+        ctrl.$forceUpdate();
+      });
+    }
+    if (ctrl.data.activeName) {
+      ctrl.activeName = "1";
+    }
+    ctrl.loadSetting();
+    //console.log(this.SettingForm.functions);
+  },
+  methods: {
+    getUserInfo(userId, field) {
+      var ctrl = this;
+      if(!ctrl.ListUserInfo || !ctrl.ListUserInfo[userId]) {
+        return false;
+      } else if(ctrl.ListUserInfo[userId][field]) {
+        return ctrl.ListUserInfo[userId][field]
+      } else {
+        if(field == 'Avatar') {
+          return "assets/images/avatars/profile.png"
+        } else
+          return false;
+      }
+    },
+    loadAvatar(avatar) {    
+      //if (avatar == false) avatar = "assets/images/avatars/profile.png";
+      avatar = avatar.replace("profile.jpg", "profile.png");
+      var strAvatar =
+        avatar === "assets/images/avatars/profile.png"
+          ? this.$appUri.BaseURL + avatar
+          : this.$appUri.BaseURL +
+            avatar.replace("/", "") +
+            "&Height=50&Width=50";
+      return strAvatar;
+    },
+    createLogs(source) {
+      var countHistory = this.$Utils.updateParamsSingleRequest(
+        this.$Lodash.cloneDeep(this.$singleRequest),
+        {
+          RequestTemplate: "ChangedLogs.Count",
+          SourceId: source,
+          Code: "ChangedHistory"
+        }
+      );
+      this.$Utils.post(countHistory).then(result => {
+        if (this.$Utils.isEmpty(result, "R1.Data")) {
+          var content = [
+            {
+              ColumnCaption: "Đã xem",
+              ColumnName: "Seen",
+              NewDisplayValue: "",
+              NewValue: ""
+            }
+          ];
+          // var content = {"Bình luận": this.$Utils.encodeHtmlEntities(this.$Utils.expressionToString(this.parent, arrChanged))}
+          var insertRequest = this.$Utils.updateParamsSingleRequest(
+            countHistory,
+            {
+              RequestTemplate: "ChangedLogs.Insert",
+              Version: parseInt(result.R1.Data) + 1,
+              Changes: JSON.stringify(content),
+              CreatedByName: this.$Utils.getUserInfo("Username")
+            }
+          );
+          this.$Utils.post(insertRequest).then(insertResult => {
+            if (insertResult.success && insertResult.R1.success) {
+              /** do something after insert history success*/
+            } else {
+              this.$Utils.showMessage(
+                "error",
+                this.$toastMessage.insertHistoryFailed +
+                  (objReturn.Name ? objReturn.Name : "")
+              );
+            }
+          });
+        } else {
+          this.$Utils.showMessage(
+            "error",
+            this.$toastMessage.insertHistoryFailed +
+              (objReturn.Name ? objReturn.Name : "")
+          );
+        }
+      });
+    },
+    saveUserList(object) {
+      var flag = false;
+      if (this.$Utils.getUserInfo("LoginName") != "superadmin") {
+        if (this.$Utils.isEmpty(object, "UserList") && object.UserList != "") {
+          if (
+            object.UserList.indexOf(this.$Utils.getUserInfo("UserId")) == -1
+          ) {
+            var userList = JSON.parse(object.UserList);
+            userList.push(this.$Utils.getUserInfo("UserId"));
+            flag = true;
+          }
+        } else {
+          var userList = [];
+          userList.push(this.$Utils.getUserInfo("UserId"));
+          flag = true;
+        }
+        if (flag == true) {
+          var request = this.$Lodash.cloneDeep(this.$singleRequest);
+          request.R1_RequestTemplate = "AG_Task_Task.Update";
+          request.R1_RequestDataGroup = "DataGroup.danh-sach-cong-viec.04b66";
+          request.R1_Id = object.Id;
+          request.R1_UserList = JSON.stringify(userList);
+          request.R1_RequestFields = "Id,UserList";
+          this.$Utils.post(request).then(data => {
+            this.createLogs(object.Id);
+            // if (this.$Utils.isEmpty(this.Setting.parentSetting, "research")) {
+            //   this.Setting.parentSetting.research.function(
+            //     this.Setting.parentSetting.research.Category,
+            //     this.Setting.parentSetting.research.Condition
+            //   );
+            // }
+          });
+        }
+      }
+    },
+    showTaskDetail() {
+      if (this.$Utils.isEmpty(this.data, "setting")) {
+        // var dataToPass = this.data.setting
+        var url = "/dynamic/view/Index=" + this.task.Index;
+        this.close();
+        this.$router.push(url);
+      } else {
+        //var dataToPass = { DataSource: 'AG_Task_Task', Code: 'Form.task.0d1c1', DataGroup: 'DataGroup.danh-sach-cong-viec.04b66' };
+
+        var data = {
+          url: "task-report-page",
+          RootData: "AG_Task_Task",
+          DataSource: "Form.task.0d1c1",
+          DataGroup: "DataGroup.danh-sach-cong-viec.04b66",
+          ElementType: "Popup",
+          ModuleCode: "Form.task.0d1c1",
+          parentSetting: {
+            object: this.task,
+            set: {
+              ElementType: "Popup",
+              GetFullData: "true"
+            },
+            isCall: true,
+            loadScrumboard: true,
+            loadCalendar: true
+          },
+          ModuleType: "Form"
+        };
+        this.$hub.$emit(
+          "set-modal-data",
+          "Chỉnh sửa công việc",
+          "100%",
+          true,
+          "center",
+          DynamicPage,
+          true,
+          "",
+          {
+            Template: "Modal",
+            Module: [data]
+          },
+          false
+        );
+      }
+    },
+    loadSetting() {
+      var vm = this;
+      var setFilterSetting = false;
+      var request = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: 1,
+        R1_RequestTemplate: "Setting.SearchBase",
+        R1_ParentCode: "xSetting.Project.Form",
+        R1_Code: "Form.task.0d1c1"
+      };
+      vm.$Utils.post(request).then(data => {
+        var SettingForm = vm.$Utils.getDataWithRoot(
+          data.R1,
+          "Data.DynamicDS.Setting"
+        )[0];
+        if (
+          vm.$Utils.isEmpty(SettingForm, "Description") &&
+          vm.$Lodash.isString(SettingForm.Description)
+        )
+          SettingForm.Description = JSON.parse(SettingForm.Description);
+        $.each(SettingForm.Description, (fKey, fData) => {
+          SettingForm[fKey] = fData;
+        });
+        this.SettingForm = SettingForm;
+      });
+    },
+    searchUser() {
+      var ctrl = this;
+      var request = {
+        RequestAction: "SearchUser",
+        RequestClass: "BPM",
+        RequestDataType: "json",
+        ConditionFields:
+          "Status;LoginName;UserId;GroupId;",
+        StaticFields: "UserId;Username;LoginName;Status;",
+        DynamicFields:
+          "Avatar;",
+        OrderFields: "LoginName ASC",
+        // Status: 1,
+      };
+      ctrl.$Utils.post(request).then(data => {
+        data = this.$Utils.getDataWithRoot(
+          data,
+          "UserDS.User"
+        );
+        ctrl.ListUserInfo = this.$Lodash.chain(data).keyBy('UserId').value();
+      })
+    },
+    close() {
+      this.$hub.$emit("close-modal");
+    },
+    moment: function(date) {
+      return Vue.moment(date);
+    },
+    formatDate: function(date) {
+      return Vue.moment(date).format("DD/MM/YYYY  h:mm");
+    }
+  }
+};
+</script>
+<style lang="scss">
+.show-task-detail {
+  .el-card__body {
+    padding: 3px;
+  }
+
+  .round-image {
+    border-radius: 50%;
+    max-height: 36px;
+    max-width: 36px;
+    // display: block;
+    margin: auto;      
+  }
+}
+.taskDetail {
+  font-size: 16px;
+}
+
+.btnEditTask {
+  position: absolute;
+  right: 36px;
+  top: 27px;
+  border-radius: 50%;
+  height: 50px;
+}
+
+.btnEditTask i {
+  font-size: 20px;
+}
+
+.showDetailScrumboard .el-dialog__header {
+  color: #fff;
+  font-size: 16px;
+}
+</style>

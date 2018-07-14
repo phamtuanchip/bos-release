@@ -1,0 +1,72 @@
+{
+	"doParallel": "UpdateAnotherFromSources",
+	"Source": {
+		"Total": 1,
+		"R1": {
+			"Static": {
+				"R1_RequestTemplate": "xDocument_Document.Search",
+				"R1_RequestDataGroup": "DataGroup.orderpart.82fjy",
+				"R1_Code": "OrderPart",
+				"R1_RequestFields": "Id;Code;Category;ProductCount;OrderId;Barcode;Priority",
+				"R1_DataSource": "Data.DocumentDS.Document",
+				"R1_Priority": 0
+			},
+			"StaticParam": {
+				"DataSource": "Data.DocumentDS.Document"
+			},
+			"SearchTargetMapping": {
+				"MetaKeywords": "Barcode",
+				"Status": "Category"
+			},
+			"Operations": [
+				{
+					"Operator": "Minus",
+					"Target": "TotalAttachments",
+					"Agru1": "TotalAttachments",
+					"Agru2": "ProductCount"
+				}
+			],
+			"Condition": {
+				"OrderId": "DocumentForm"
+			}
+		}
+	},
+	"Target": {
+		"Search": {
+			"RequestTemplate": "xDocument_Document.Search",
+			"RequestDataGroup": "DataGroup.warehouse.0fd40",
+			"Code": "Warehouse",
+			"RequestFields": "Id;Code;MetaKeywords;Status;Barcode",
+			"DataSource": "Data.DocumentDS.Document"
+		},
+		"Update": {
+			"RequestTemplate": "xDocument_Document.Update",
+			"RequestDataGroup": "DataGroup.warehouse.0fd40",
+			"Code": "Warehouse",
+			"RequestFields": "Id;Code;MetaKeywords;Status;TotalAttachments",
+			"DataSource": "Data.DocumentDS.Document"
+		},
+		"StaticParam": {
+			"DataSource": "Data.DocumentDS.Document",
+			"Key": "Id"
+		}
+	},
+	"AfterUpdate": "UpdateAnother",
+	"MultiTarget": "true",
+	"Request": [
+		{
+			"NewValue": {
+				"MetaDescription": "39636d3b-705b-4b51-91c9-67afda36c62e"
+			},
+			"RequestConditions": "Id;Code;RequestDataGroup;RequestFields;Id",
+			"Code": "Order",
+			"RequestDataGroup": "DataGroup.order.9ejnl",
+			"Id": "{{DocumentForm}}",
+			"RequestFields": "Id;Code;MetaDescription",
+			"RequestTemplate": "xDocument_Document.",
+			"RootData": "Data.DocumentDS.Document",
+			"ParentChild": "true"
+		}
+	],
+	"AfterAction": "Redirect"
+}

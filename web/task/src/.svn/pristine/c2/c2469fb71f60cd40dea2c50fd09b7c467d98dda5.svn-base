@@ -1,0 +1,655 @@
+<template>
+<div><b-modal class="chartFilter text-primary" id="CountFilter" ref="CountFilter" title="Bộ lọc"  header-bg-variant="primary" hide-footer>
+                <template>
+                  <ProjectFilter :onChangeWorker="onChangeWorker"
+                      :onChangeDate="onChangeDate"
+                      :onChangeStatus="onChangeStatus"
+                      :onChangeActive="onChangeActive"
+                      :onChangeDueDate="onChangeDueDate"
+                      :onChangeOverDue="onChangeOverDue"
+                      :onResetFilter="resetFilter" 
+                      :onCloseFilter="closeFilter"                           
+                      :workers="users"
+                      :status="listStatus" ></ProjectFilter>
+                </template>
+               </b-modal>
+<div class="table-responsive project-count">
+  <div class="ProjectCountInlineFilter mt-2 float-right" v-if="!$isMobileDevice">
+                <ProjectFilter :onChangeWorker="onChangeWorker"
+                      :onChangeDate="onChangeDate"
+                      :onChangeStatus="onChangeStatus"
+                      :onChangeActive="onChangeActive"
+                      :onChangeDueDate="onChangeDueDate"
+                      :onChangeOverDue="onChangeOverDue"
+                      :onResetFilter="resetFilter" 
+                      :onCloseFilter="closeFilter"                           
+                      :workers="users"
+                      :status="listStatus" ></ProjectFilter>
+                  <!-- <i @click="resetFilter" class="fa fa-refresh fa-lg"></i>       -->
+                  <!-- <el-checkbox @change="onChangeDate" v-model="DateProject"><span class="sm-none">Khoảng thời gian</span></el-checkbox>
+                  <el-checkbox @change="onChangeDueDate" v-model="DueDate"><span class="sm-none">Đến hạn</span></el-checkbox>
+                  <el-checkbox @change="onChangeOverDue" v-model="OverDue"><span class="sm-none">Quá hạn</span></el-checkbox>
+
+                  <el-select  @change="onChangeWorker" v-model="WorkerProject" filterable  placeholder="Nhân sự thực hiện" multiple
+                            collapse-tags no-data-text="Không có dữ liệu">
+                    <el-option-group
+                      v-for="group in users"
+                      :key="group.label"
+                      :label="group.label">
+                        
+                      <el-option
+                        v-for="item in group.options"
+                        :key="item.UserId"
+                        :label="item.Username"
+                        :value="item.UserId">
+                      </el-option>
+                    </el-option-group>
+                  </el-select>    
+                  
+                  <el-select class="Status" @change="onChangeActive" v-model="UserActive"  placeholder="Trạng thái nhân sự" 
+                               no-data-text="Không có dữ liệu">
+                        <el-option v-for="item in actives"
+                                  :key="item.Id"
+                                  :label="item.Name"
+                                  :value="item.Id">
+                        </el-option>
+                  </el-select>                  
+                       
+                  <el-select class="Status" @change="onChangeStatus" v-model="StatusTask" filterable  placeholder="Trạng thái" multiple
+                            collapse-tags no-data-text="Không có dữ liệu">
+                    <el-option v-for="item in listStatus"
+                              :key="item.Id"
+                              :label="item.Name"
+                              :value="item.Id">
+                    </el-option>
+                  </el-select>      -->
+               </div>
+
+              
+               
+
+    <table class="table table-hover table-bordered">
+      <thead class="thead-light">
+        <tr>
+          <th v-if="h.label != ''" v-for="(h, index) in headers" :key="h.key" scope="col">
+              <span> {{h.label}}
+                  <el-badge v-if="h.isCount" :value="h.count"   class="item"></el-badge>
+                   
+                 <i v-if="index == 0 && $isMobileDevice" class="AdvFilter fa fa-filter fa-lg" v-b-modal.CountFilter></i>
+                 
+              </span>
+               
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :id="c.Id" @click="toggle(c.Id)" :class="c.Type === 'project' ? 'table-active' : c.ProjectId" v-for="c in db" :key="c.Index" >
+          <td v-if="h.label != ''" v-for="h in headers" :key="h.key" scope="col">
+              <strong v-if="c.Type === 'project' && h.isCount">
+                 {{c[h.key]}}
+              </strong>
+                <span v-else>
+                  <span v-if="c.Type === 'user' && h.key ==='Name'">
+                    <div class="content">
+                        <img :src="loadAvatar(c.Avatar)" class="img-avatar"/>
+                                  {{c[h.key]}}
+                    </div>
+                    
+                  </span>
+                  <span :class="c.Type" v-else><i v-if="h.key === 'Name'" class="fa fa-chevron-circle-down">{{c[h.key]}}</i>
+                  <span v-else>{{c[h.key]}}</span>
+                  </span>
+                </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+</div>
+</div>
+</template>
+<script>
+import Vue from "vue";
+import ProjectFilter from "@/components/static/ProjectFilter";
+export default {
+  components: { ProjectFilter },
+  inject: ["SessionId", "loadAvatar", "taskDone", "notDone", "listStatus"],
+  props: {
+    projects: {
+      type: Array,
+      default() {
+        return [];
+      }
+    },
+    workers: {
+      type: Array,
+      default() {
+        return [];
+      }
+    },
+    actives: {
+      type: Array,
+      default() {
+        return [
+          { Id: "", Name: "Tất cả" },
+          { Id: "1", Name: "Đang hoạt động" },
+          { Id: "0", Name: "Không hoạt động" }
+        ];
+      }
+    }
+  },
+  data() {
+    return {
+      VersionProject: [],
+      WorkerProject: [],
+      StatusTask: [],
+      DateProject: true,
+      DueDate: false,
+      OverDue: false,
+      UserActive: "",
+
+      selectedWorkers: undefined,
+      selectedStatus: undefined,
+      selectedDate: true,
+      selectedActive: undefined,
+      isShow: true,
+      list: [],
+      users: [],
+      active: [],
+      deactive: [],
+      table: {
+        headers: [
+          { label: "Dự án/nhân sự", count: 0, key: "Name", isCount: false },
+          { label: "", count: 0, key: "CreatedBy", isCount: false },
+          { label: "", count: 0, key: "Worker", isCount: false },
+          { label: "", count: 0, key: "Status", isCount: false },
+          { label: "Tạo ra", count: 0, key: "SumCreatedBy", isCount: true },
+          { label: "Gán", count: 0, key: "SumWorker", isCount: true },
+          {
+            label: "Thực hiện",
+            count: 0,
+            key: "SumStatus",
+            isCount: true
+          },
+          {
+            label: "Hoàn thành(%)",
+            count: 0,
+            key: "PercentageStatus",
+            isCount: true
+          },
+          {
+            label: "Kế hoạch(giờ)",
+            count: 0,
+            key: "PlanManHour",
+            isCount: true
+          },
+          {
+            label: "Thực tế(giờ)",
+            count: 0,
+            key: "RemainingManHour",
+            isCount: true
+          },
+          {
+            label: "Thực tế - kế hoạch",
+            count: 0,
+            key: "Perfomance",
+            expression: ["-", "RemainingManHour", "PlanManHour"],
+            isCount: true
+          }
+        ],
+        data: { tasks: [], projects: {}, users: {}, roles: [] }
+      },
+      headers: [],
+      ProjectStartTimeStartValue: "",
+      ProjectStartTimeEndValue: "",
+      selectedDepts: "",
+      selectedProjs: ""
+    };
+  },
+  created() {
+    this.$hub.$on("filterChanged", dataToPass => {
+      //console.log(dataToPass);
+      this.ProjectStartTimeStartValue = dataToPass.dateRangeSelected[0];
+      this.ProjectStartTimeEndValue = dataToPass.dateRangeSelected[1];
+      if (dataToPass.selectedDepts)
+        this.selectedDepts = dataToPass.selectedDepts.join(";");
+      if (dataToPass.selectedProjs)
+        this.selectedProjs = dataToPass.selectedProjs.join(";");
+      this.initTable();
+    });
+  },
+  computed: {
+    db() {
+      var db = [];
+      var GroupIds = Object.keys(this.table.data.projects);
+      var UserIds = Object.keys(this.table.data.users);
+      var countFields = this.$Lodash.filter(this.table.headers, {
+        isCount: true
+      });
+      this.headers = this.table.headers.map(h => {
+        h.count = 0;
+        return h;
+      });
+      GroupIds.map(k => {
+        var p = this.$Lodash.cloneDeep(this.table.data.projects[k]);
+        if (p) {
+          p.Type = "project";
+          p.Name = p.GroupName;
+          p.Id = p.GroupId;
+          countFields.map(c => {
+            p[c.key] = 0;
+          });
+
+          var pTask = this.$Lodash.filter(this.table.data.tasks, {
+            VersionProject: p.Id
+          });
+
+          db.push(p);
+          UserIds.map(u => {
+            var user = this.$Lodash.cloneDeep(this.table.data.users[u]);
+            if (user) {
+              var roles = this.$Lodash.filter(this.table.data.roles, {
+                GroupParent: k
+              });
+              //console.log(roles);
+              if (
+                roles.length > 0 &&
+                this.$Lodash.intersection(
+                  Object.keys(this.$Lodash.keyBy(roles, "GroupId")),
+                  user.Groups.split(";")
+                ).length > 0 &&
+                user.Groups.indexOf(k) > -1
+              ) {
+                user.ProjectId = k;
+                countFields.map(c => {
+                  user[c.key] = 0;
+                });
+                user.Id = user.UserId;
+                user.Type = "user";
+                user.Name = user.Username;
+                user.Role = roles;
+                var uTask = this.$Lodash.filter(pTask, {
+                  Worker: user.Id
+                });
+                user.SumWorker = uTask.length;
+                p.SumWorker += user.SumWorker;
+
+                user.SumCreatedBy = this.$Lodash.filter(pTask, {
+                  CreatedBy: user.Id
+                }).length;
+                p.SumCreatedBy += user.SumCreatedBy;
+                user.PercentageStatus = 0;
+                user.SumStatus = this.$Lodash.filter(uTask, t => {
+                  return this.taskDone.indexOf(t.Status) == -1;
+                }).length;
+                p.SumStatus += user.SumStatus;
+                var done = this.$Lodash.filter(uTask, t => {
+                  return this.taskDone.indexOf(t.Status) > -1;
+                }).length;
+                if (p.SumWorker > 0) {
+                  p.PercentageStatus = this.parseFloatFixed(
+                    100 - p.SumStatus / p.SumWorker * 100
+                  );
+                }
+                if (user.SumWorker > 0) {
+                  user.PercentageStatus = this.parseFloatFixed(
+                    100 - user.SumStatus / user.SumWorker * 100
+                  );
+                }
+
+                uTask.forEach(t => {
+                  if (user.Id == t.Worker) {
+                    user.PlanManHour += this.parseFloatFixed(t.PlanManHour);
+                    user.RemainingManHour += this.parseFloatFixed(
+                      t.RemainingManHour
+                    );
+                    p.PlanManHour += this.parseFloatFixed(t.PlanManHour);
+                    p.RemainingManHour += this.parseFloatFixed(
+                      t.RemainingManHour
+                    );
+                  }
+                });
+                db.push(user);
+              }
+            }
+          });
+        }
+
+        p.Perfomance = p.RemainingManHour - p.PlanManHour;
+        this.headers = this.table.headers.map(h => {
+          if (
+            h.isCount &&
+            p[h.key] &&
+            !isNaN(p[h.key]) &&
+            h.key !== "PercentageStatus"
+          ) {
+            h.count += p[h.key];
+          }
+          return h;
+        });
+      });
+      var hdc = this.$Lodash.find(this.headers, { key: "PercentageStatus" });
+      var hds = this.$Lodash.find(this.headers, { key: "SumStatus" });
+      var hdw = this.$Lodash.find(this.headers, { key: "SumWorker" });
+      if (hdc && hds && hdw && hdw.count > 0)
+        hdc.count = this.parseFloatFixed(100 - hds.count / hdw.count * 100);
+      return db;
+    }
+  },
+  watch: {
+    projects: {
+      handler: function(after, before) {
+        this.list = after;
+      },
+      deep: true
+    },
+    workers: {
+      handler: function(after, before) {
+        var users = this.$Lodash.filter(after, u => {
+          return u.LoginName != "superadmin" && u.LoginName != "admin";
+        });
+        this.active = this.$Lodash.filter(users, { Status: "1" });
+        this.deactive = this.$Lodash.filter(users, { Status: "0" });
+        this.users = [
+          { label: "HOẠT ĐỘNG", options: this.active },
+          { label: "KHÔNG HOẠT ĐỘNG", options: this.deactive }
+        ];
+      },
+      deep: true
+    }
+  },
+  methods: {
+    closeFilter() {
+      this.$refs.CountFilter.hide();
+    },
+    resetFilter() {
+      this.DateProject = true;
+      this.WorkerProject = "";
+      this.StatusTask = "";
+      this.DueDate = false;
+      this.OverDue = false;
+      this.UserActive = "";
+      this.initTable();
+    },
+    onChangeActive(data) {
+      if (data.length > 0) {
+        this.selectedActive = data;
+      } else {
+        this.selectedActive = undefined;
+      }
+      this.initTable();
+    },
+    onChangeStatus(data) {
+      if (data.length > 0) {
+        this.selectedStatus = data.join(";");
+      } else {
+        this.selectedStatus = undefined;
+      }
+      this.initTable();
+    },
+    onResetFilter(
+      selectedDate,
+      selectedWorkers,
+      selectedStatus,
+      dueDate,
+      overDue,
+      selectedActive
+    ) {
+      this.selectedDate = selectedDate;
+      this.selectedWorkers = selectedWorkers;
+      this.selectedStatus = selectedStatus;
+      this.dueDate = dueDate;
+      this.overDue = overDue;
+      this.selectedActive = selectedActive;
+      this.initTable();
+    },
+    onChangeDueDate(data) {
+      this.dueDate = data;
+      this.initTable();
+    },
+    onChangeOverDue(data) {
+      this.overDue = data;
+      this.initTable();
+    },
+    onSwitchView() {
+      this.isShow = !this.isShow;
+    },
+    onChangeWorker(data) {
+      if (data.length > 0) {
+        this.selectedWorkers = data.join(";");
+      } else {
+        this.selectedWorkers = undefined;
+      }
+      this.initTable();
+    },
+    onChangeDate(data) {
+      this.selectedDate = data;
+      this.initTable();
+    },
+    onChangeProject(data) {
+      if (data.length > 0) {
+        this.selectedProjects = data.join(";");
+      } else {
+        this.selectedProjects = undefined;
+      }
+      this.initTable();
+    },
+
+    toggle(className) {
+      $("." + className).toggle();
+      var iTag = $("#" + className).find("i");
+      if (iTag && iTag[0]) {
+        var currentClass = iTag[0].className;
+        if (currentClass === "fa fa-chevron-circle-right")
+          iTag[0].className = "fa fa-chevron-circle-down";
+        else iTag[0].className = "fa fa-chevron-circle-right";
+      }
+    },
+    parseFloatFixed(val, lenth) {
+      //return parseFloat(val ? val : 0);
+      return parseFloat(parseFloat(val ? val : 0).toFixed(lenth ? length : 2));
+    },
+    initTable() {
+      this.table.data = { tasks: [], projects: {}, users: {}, roles: [] };
+      var requestGroup = {
+        RequestAction: "SearchUserWithGroups",
+        IncludedGroupManager: "true",
+        RequestClass: "BPM",
+        RequestDataType: "json",
+        ConditionFields:
+          "IncludedGroupManager;Username;Group;Status;LoginName;UserId;GroupId;",
+        StaticFields: "UserId;Username;LoginName;Status;",
+        DynamicFields: "Avatar;",
+        OrderFields: "LoginName ASC"
+        //Status: 1
+      };
+      //search user
+
+      if (this.selectedActive) {
+        if (this.selectedActive === "1") {
+          requestGroup.UserId = Object.keys(
+            this.$Lodash.keyBy(this.active, "UserId")
+          ).join(";");
+        } else if (this.selectedActive === "0") {
+          requestGroup.UserId = Object.keys(
+            this.$Lodash.keyBy(this.deactive, "UserId")
+          ).join(";");
+        }
+      }
+
+      if (this.selectedWorkers) {
+        requestGroup.UserId = this.selectedWorkers;
+      }
+
+      this.$Utils.post(requestGroup).then(data => {
+        //console.log(requestGroup, data);
+        this.table.data.users = this.$Utils.getDataWithRoot(
+          data,
+          "Data.UserDS.User"
+        );
+        this.table.data.users = this.$Lodash.filter(
+          this.table.data.users,
+          u => {
+            return u.LoginName != "superadmin" && u.LoginName != "admin";
+          }
+        );
+        this.table.data.users = this.$Lodash.keyBy(
+          this.table.data.users,
+          "UserId"
+        );
+      });
+
+      var pRequest = this.$Lodash.cloneDeep(this.$singleRequest);
+      pRequest.R1_TotalRequests = 1;
+      pRequest.R1_RequestTemplate = "tblGroup.Search";
+      pRequest.R1_RequestDataGroup = "DataGroup.quan-ly-du-an.053gf";
+      pRequest.R1_RequestFields =
+        "GroupId;GroupName;GroupType;GroupParent;ProjectCode;CreatedBy;State;Status;Type;Department;";
+      pRequest.R1_GroupType = "4";
+      pRequest.R1_GroupId = this.selectedProjs;
+      if (!this.$isSystemAdmin() && !this.$isMantisAdmin()) {
+        pRequest.R1_AssignedUser = this.SessionId;
+      }
+      this.$Utils.post(pRequest).then(dt => {
+        this.table.data.projects = this.$Utils.getDataWithRoot(
+          dt.R1,
+          "Data.UserDS.Group"
+        );
+        if (this.selectedDepts) {
+          var sDept = this.selectedDepts.split(";");
+
+          this.table.data.projects = this.$Lodash.filter(
+            this.table.data.projects,
+            p => {
+              var pDept = [];
+              if (p.Department) pDept = p.Department.split(";");
+              return this.$Lodash.intersection(sDept, pDept).length > 0;
+            }
+          );
+        }
+        this.table.data.projects = this.$Lodash.keyBy(
+          this.table.data.projects,
+          "GroupId"
+        );
+        var GroupIds = Object.keys(this.table.data.projects).join(";");
+
+        var rRequest = this.$Lodash.cloneDeep(this.$singleRequest);
+        rRequest.R1_TotalRequests = 1;
+        rRequest.R1_RequestTemplate = "tblGroup.Search";
+        rRequest.R1_RequestDataGroup = "DataGroup.quan-ly-du-an.053gf";
+        rRequest.R1_RequestFields =
+          "GroupId;GroupName;GroupType;GroupParent;ProjectCode;CreatedBy;State;Status;Type;Department;";
+        rRequest.R1_GroupType = "5";
+        //rRequest.R1_GroupId = this.selectedProjs;
+        // if (!this.$isSystemAdmin() && !this.$isMantisAdmin()) {
+        //   rRequest.R1_AssignedUser = this.SessionId;
+        // }
+        rRequest.R1_GroupParent = GroupIds;
+        //var roles = [];
+        this.$Utils.post(rRequest).then(dt => {
+          this.table.data.roles = this.$Utils.getDataWithRoot(
+            dt.R1,
+            "Data.UserDS.Group"
+          );
+          //console.log("roles", roles);
+        });
+        // this.table.data.roles = this.$Lodash.keyBy(
+        //   this.table.data.roles,
+        //   "GroupId"
+        // );
+        //search task by project
+        var tRequest = {
+          RequestClass: "xBase",
+          RequestAction: "Request",
+          TotalRequests: 1
+        };
+        tRequest["R1_RequestTemplate"] = "AG_Task_Task.Search";
+        tRequest["R1_RequestDataGroup"] = "DataGroup.danh-sach-cong-viec.04b66";
+        tRequest["R1_RequestFields"] =
+          "Id;Name;Index;PlanStartDate;Status;Worker;PlanManHour;RemainingManHour;CreatedBy" +
+          ";UserList;VersionProject;Deadline";
+        tRequest["R1_VersionProject"] = GroupIds;
+        if (this.selectedActive) {
+          if (this.selectedActive === "1") {
+            tRequest["R1_Worker"] = Object.keys(
+              this.$Lodash.keyBy(this.active, "UserId")
+            ).join(";");
+          } else if (this.selectedActive === "0") {
+            tRequest["R1_Worker"] = Object.keys(
+              this.$Lodash.keyBy(this.deactive, "UserId")
+            ).join(";");
+          }
+        }
+
+        if (this.selectedDate) {
+          tRequest["R1_PlanStartDateStartValue"] = this.$Utils.formatDateTime(
+            this.ProjectStartTimeStartValue
+          );
+          tRequest["R1_PlanStartDateEndValue"] = this.$Utils.formatDateTime(
+            this.ProjectStartTimeEndValue
+          );
+        }
+
+        if (this.selectedWorkers) {
+          tRequest["R1_Worker"] = this.selectedWorkers;
+        }
+        if (this.selectedStatus) {
+          tRequest["R1_Status"] = this.selectedStatus;
+        }
+        if (this.overDue || this.dueDate) {
+          tRequest["R1_Status"] = this.notDone.join(";");
+        }
+
+        if (!this.$isSystemAdmin() && !this.$isMantisAdmin()) {
+          tRequest.R1_AssignedUser = this.SessionId;
+        }
+
+        this.$Utils.post(tRequest).then(data => {
+          //console.log(tRequest, data);
+          var task = this.$Utils.getDataWithRoot(
+            data["R1"],
+            "Data.TasksDS.Task"
+          );
+
+          if (this.overDue) {
+            task = this.$Lodash.filter(task, t => {
+              return Vue.moment(t.Deadline).isBefore(Vue.moment());
+            });
+          }
+          if (this.dueDate) {
+            task = this.$Lodash.filter(task, t => {
+              return (
+                Vue.moment(t.Deadline).isAfter(Vue.moment()) &&
+                Vue.moment(t.Deadline).isBefore(Vue.moment().endOf("days"))
+              );
+            });
+          }
+          this.table.data.tasks = task;
+        });
+      });
+    }
+  }
+};
+</script>
+<style lang="scss" scoped>
+.project-count {
+  .ProjectCountInlineFilter {
+    background: white;
+    padding: 1px;
+  }
+  .table {
+    background-color: white !important;
+    td:not(:first-child) {
+      text-align: center;
+    }
+  }
+}
+.project {
+  font-weight: bold;
+}
+.content {
+  .img-avatar {
+    width: 42px;
+    height: 42px;
+  }
+}
+</style>

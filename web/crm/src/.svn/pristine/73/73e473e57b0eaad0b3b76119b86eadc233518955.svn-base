@@ -1,0 +1,59 @@
+<template>
+  <el-table v-if="tblData.rowColorify" :data="tableData.cellData" :stripe="tableData.stripe" :border="tableData.border"
+            :style="'width:'+tableData.width" :empty-text="tableData.emptyText" highlight-current-row @selection-change="handleSelectionChange" :row-style = "tblData.rowColorify">
+    <el-table-column v-if="tableData.hasMultiSelect" type="selection" width="50"></el-table-column>
+    <el-table-column v-if="tableData.hasIndex" type="index" width="50"></el-table-column>
+    <el-table-column v-for="column in tableData.columns" :label = "column.label" :type="column.type" :fixed="column.fixed" :width="column.width">
+      <template slot-scope="scope">
+        <div :style="tblData.rowColorify">
+          <div v-if="column.clickableType === 'link'" :style="column.style" @click="emitEvent([scope.row, column, scope.$index])">
+            <i v-if="column.class" :class="column.class" ></i>
+            <img v-if="column.img && scope.row[column.img]" :src="scope.row[column.img]" :style="column.imgStyle"/>
+            <a href="javascript:void(0)" v-if="column.name">{{scope.row[column.name]}}</a>
+          </div>
+          <div v-else-if="column.clickableType === 'tool'" :style="column.style">
+            <i v-for="icon in column.icons" v-if="icon.isClickable" style="cursor: pointer;" :class="icon.class" @click="emitEvent([scope.$index, column, icon])"></i>
+          </div>
+          <div v-else :style="column.style + ' ;color:'+ tblData.colorifyText(scope.row, column)">
+            <img v-if="column.img && scope.row[column.img]" :src="scope.row[column.img]" :style="column.imgStyle"/>
+            {{scope.row[column.name]}}</div>
+        </div>
+      </template>
+    </el-table-column>
+  </el-table>
+</template>
+
+<script>
+  export default {
+    name: "CustomizableTable",
+    props: ['tblData'],
+    data () {
+      return {
+        tableData: this.tblData,
+      }
+    },
+    watch : {
+      // tblData: {
+      //   handler: function (after, before) {
+      //     this.tblData = after
+      //   },
+      //   deep: true
+      // },
+    },
+    methods : {
+      handleSelectionChange (data) {
+        this.$hub.$emit('rowsSelected', {data: data, name: this.tableData.tblName});
+      },
+      emitEvent (data) {
+        this.$hub.$emit('columnClicked', data);
+      },
+    },
+    created () {
+
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>

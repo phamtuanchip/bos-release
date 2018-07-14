@@ -1,0 +1,26 @@
+**** Cấu hình cho phần POS
+- Cấu hình các trường mới trong khối dữ liệu order, thêm trường Unit vào warehouseProduct
+- Migrate dữ liệu tồn kho, thêm trường tên sản phẩm và đơn vị
+- Template hóa đơn
+- Cấu hình trang điểm bán
+- cập nhật cấu hình after update của lead, contact
+
+*****
+
+- Tạo khối dữ liệu 'Nhập xuất theo phiếu'
+- Tạo request template update lịch sử
+- 
+
+
+
+
+--POS lần 2:
++ Thêm trường Đang xử lý(Priority) vào trong khối dữ liệu Order
++ 
+
+
+
+
+
+
+--ImpExp lần 3

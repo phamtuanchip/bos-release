@@ -1,0 +1,416 @@
+<template>
+    <div class="timeline-page">
+            <el-container direction="vertical">
+                <el-card v-for="item in timeline" :key="item.Id" class="box-card">
+                  <div class="text item">
+                     
+                    <el-row style="display: flex; align-items: center">
+                      <el-col :xs="4" :md="3" class="mr-2">
+                        <div>
+                          <div style="text-align: center">                           
+                            <img v-if="item.TargetType === '3' && item.Avatar" :src="loadAvatar(item.Avatar)" class="round-image"/>
+                            <i v-else-if="item.TargetType === '2'" class="fa fa-sitemap fa-2x"></i>
+                            <i v-if="item.TargetType === '1'" class="fa fa-building-o fa-2x"></i>
+                          </div>
+                          <div style="text-align: center">
+                            <div style="overflow: hidden">                            
+                                {{item.TargetType === '3' ? item.OwnerName : item.GroupName}}
+                             </div>
+                            <div class="b-600">{{getDayName(item.Modified)}}</div>
+                          </div>
+                        </div>
+                      </el-col>
+                      <el-col :xs="20" :md="21">
+                        <el-row>
+                          <span class="b-600">Tên:
+                            <a href="javascript:void(0)" @click="fnOpenDetail(item, false)">
+                              <span>
+                                {{item.Name}}
+                              </span>
+                            </a>
+                          </span>
+                          <br/>
+                          <!-- <span><span class="b-600">Mục tiêu: </span> {{item.TargetsName && item.TargetsName!==''? item.TargetsName: '---'}}</span>
+                          <br/>
+                          <span><span class="b-600">Dự án: </span> {{item.VersionProjectName && item.VersionProjectName!==''? item.VersionProjectName: '---'}}</span>
+                          <br/> -->
+                          <span>
+                              <span class="b-600">Bắt đầu: </span> {{$Utils.formatDateTime(item.ActualStartDate, "DD/MM/YYYY")}}| 
+                              <span class="b-600">Kết thúc:  </span>  {{$Utils.formatDateTime(item.ActualFinishDate, "DD/MM/YYYY")}}| 
+                              <span class="b-600">Kế hoạch: </span>  {{item.Plan}}|                               
+                              <span class="b-600">Kết quả: </span>  {{item.Done}}|
+                              <span class="b-600">Đơn vị tính: </span> {{item.Unit}}|
+                              <span class="b-600">Thực hiện: </span> {{item.AssignedName}}
+                            </span>
+
+                        </el-row>
+                        <el-row class="mt-2">
+                          <el-col :xs="24" :md="6">
+                            <el-row style="text-align: left;">
+                              <el-col :xs="12" :md="11"><span class="b-600">Hoàn thành:</span></el-col>
+                              <el-col :xs="12" :md="13">
+                                <div class="span-block-border">                                
+                                  <el-progress :text-inside="true" :stroke-width="18" :percentage="item.percentage"
+                         :status="item.percentage >= 100 ? 'success' : '' "></el-progress>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col :xs="24" :md="5">
+                            <el-row style="text-align: left;">
+                              <el-col :xs="12" :md="11"><span class="b-600">Quyền xem: </span></el-col>
+                              <el-col :xs="12" :md="13">
+                                <div class="span-block-border">
+                                    <span>{{item.IsPublic === '1' ? 'Công khai' : 'Riêng tư' }}</span>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col :xs="24" :md="7">
+                            <el-row style="text-align: left;">
+                              <el-col :xs="12" :md="11"><span class="b-600">Loại: </span></el-col>
+                              <el-col :xs="12" :md="13">
+                                <div class="span-block-border"><span>{{item.TargetTypeName.replace('Mục tiêu', '').toUpperCase()}}</span>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col :xs="24" :md="7" v-if="item.TargetType != '3'">
+                            <el-row style="text-align: left;">
+                              <el-col :xs="12" :md="11"><span class="b-600">Quản lý: </span></el-col>
+                              <el-col :xs="12" :md="13"  class="text-nowrap">
+                                 
+                                  <span>
+                                    {{item.OwnerName}} <img  :src="loadAvatar(item.Avatar)" class="round-image"/>
+                                </span>
+                                 
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col v-if="!$isMobileDevice" :md="6">
+                            <el-row>
+                              <el-col :span="6" :offset="8">                                 
+                                <div :class="parseFloat(overDue(item.ActualFinishDate)+ '') < 0 ? 'red-badge':''">
+                                  <el-badge :value="overDue(item.ActualFinishDate)" :max="99" class="item">
+                                    <i class="fa fa-calendar"></i>
+                                  </el-badge>
+                                </div>
+                              </el-col>
+                              <!-- <el-col :span="4">
+                                <el-badge :value="item.TotalDownload ? item.TotalDownload : 0" :max="99" class="item">
+                                  <i class="fa fa-paperclip "></i>
+                                </el-badge>
+
+                              </el-col> -->
+                              <el-col :span="4">
+                                <el-badge :value="totalUsers(item.AssignedName)" :max="99" class="item" >
+                                  <i class="fa fa-users " ></i>
+                                </el-badge>
+                              </el-col>
+                              <el-col :span="2" style="cursor: pointer">                                
+                                <div style="color: red">
+                                  <i :class="item.IsPublic === '1' ? '' : 'fa fa-minus-circle' "></i>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col v-else class="hr">
+                            <div class="row">
+                            <div :class="parseFloat(overDue(item.ActualFinishDate)+ '') < 0 ? 'red-badge col':'col' ">
+                              <el-badge :value="overDue(item.ActualFinishDate)" :max="99" class="item">
+                                <i class="fa fa-calendar"></i>
+                              </el-badge>
+                            </div>
+                            <!-- <div class="col">
+                              <el-badge :value="item.TotalDownload ? item.TotalDownload : 0" :max="99" class="item">
+                                <i class="fa fa-paperclip "></i>
+                              </el-badge>
+                            </div> -->
+                            <div class="col">
+                              <el-badge :value="totalUsers(item.AssignedName)" :max="99" class="item" >
+                                <i class="fa fa-users " ></i>
+                              </el-badge>
+                            </div>
+                            <div class="col">
+                              <div style="color: red">
+                                <i :class="item.IsPublic === '1' ? '' : 'fa fa-minus-circle' "></i>
+                              </div>
+                            </div>
+                          </div>
+                          </el-col>
+                        </el-row>
+                      </el-col>
+                    </el-row>
+
+                  </div>
+                </el-card>
+               
+                 
+                <el-card v-if="timeline.length == 0" class="box-card">
+                  <div class="center-div">Không có dữ liệu</div>
+                </el-card>
+              
+            </el-container>
+    </div>       
+</template>
+<script>
+  import Vue from "vue";
+  import BlockLeftPanelTarget from '@/components/static/BlockLeftPanelTarget'
+ 
+export default {
+     
+    inject:['getDayName'],
+    extends: BlockLeftPanelTarget,
+    props: ['datasrc'],
+    data(){
+        return {            
+            timeline:[]
+        }
+    },
+    watch : {
+        datasrc (newVal){            
+            this.timeline =  newVal // this.$Lodash.orderBy(newVal, ['LeftIndex'], ['desc']) 
+        }
+    },
+    methods: {
+        overDue(item, format){
+            var itemDate = format ? Vue.moment(item, format) : Vue.moment(item) ;         
+            var todayDate = Vue.moment(Date.Now);             
+             return itemDate.diff(todayDate, 'days') // 1
+        },
+        totalUsers(text){
+            return text ? text.split(',').length : 0
+        }
+    }
+
+    
+}
+</script>
+<style lang="scss">
+  .timeline-page {
+    .red-badge {
+      color: red;
+      .el-badge__content {
+        background-color: red;
+        color: white;
+      }
+    }
+
+    .el-badge__content {
+      background-color: #ececec;
+      color: black;
+    }
+
+    .hr {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top:1px dashed black;
+      .row {
+        float: right;
+      }
+    }
+
+    .chkbx {
+      margin: 0px;
+    }
+
+    /* The side navigation menu */
+    .sidenav {
+      height: 100%; /* 100% Full-height */
+      width: 0; /* 0 width - change this with JavaScript */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Stay on top */
+      top: 50; /* Stay at the top */
+      right: 0;
+      background-color: white; /* Black*/
+      overflow-x: hidden; /* Disable horizontal scroll */
+      padding-top: 30px; /* Place content 60px from the top */
+      transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */
+    }
+
+    /* The navigation menu links */
+    .sidenav a {
+      //padding: 8px 8px 8px 32px;
+      text-decoration: none;
+      font-size: 25px;
+      color: #818181;
+      display: block;
+      transition: 0.3s;
+    }
+
+    .menuTab {
+      padding-left: 5px;
+    }
+
+    /* When you mouse over the navigation links, change their color */
+    .sidenav a:hover {
+      color: #f1f1f1;
+    }
+
+    /* Position and style the close button (top right corner) */
+    .sidenav .closebtn {
+      position: absolute;
+      top: 0;
+      right: 10px;
+      font-size: 25px;
+      margin-left: 50px;
+    }
+
+    /* Style page content - use this if you want to push the page content to the right when you open the side navigation */
+    #main {
+      transition: margin-left .5s;
+      padding: 20px;
+      .el-select {
+        padding-bottom: 10px;
+      }
+    }
+
+    /* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
+    @media screen and (max-height: 450px) {
+      .sidenav {
+        padding-top: 15px;
+      }
+      .sidenav a {
+        font-size: 18px;
+      }
+    }
+
+    @media screen and (max-width: 768px) {
+      .el-date-range-picker {
+        overflow: auto !important;
+        width: 100% !important;
+      }
+    }
+
+    .left-scroll {
+      max-height: 100vh;
+      overflow-y: scroll;
+    }
+    .right-scroll {
+      max-height: 200vh;
+      overflow-y: scroll;
+    }
+    @media screen and (max-width: 1366px) {
+      .left-scroll {
+        max-height: 79vh;
+        overflow-y: scroll;
+      }
+      .right-scroll {
+        max-height: 49vh;
+        overflow-y: scroll;
+      }
+      @media screen and (max-width: 375px){
+        .left-scroll {
+          max-height: 77vh;
+          overflow-y: scroll;
+        }
+      }
+    }
+    .pd-right-10 {
+      padding-right: 10px;
+    }
+    .padding-0 {
+      padding: 0 !important;
+    }
+
+    .b-600 {
+      font-weight: 600;
+    }
+    body {
+      font-size: 13px;
+    }
+    .span-block-border {
+      text-align: center;
+      width: 60%;
+      display: inline-block;
+      span {
+        margin: auto;
+      }
+      .el-progress-bar__outer, .el-progress-bar__inner {
+        border-radius: 0px;
+      }
+    }
+    .el-progress-bar__innerText {
+      color: #0b0e0f;
+    }
+
+    .el-card__body {
+      padding: 5px 14px 5px 5px !important;
+    }
+
+    .center-div {
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+      width: auto;
+    }
+
+    .status {
+      .el-main {
+        margin-bottom: 10px;
+      }
+
+    }
+
+    .rightaligndiv {
+      padding-right: 5px;
+    }
+
+    .el-card {
+      margin-bottom: 5px;
+      width: 100%;
+      overflow: visible;
+    }
+
+    .round-image {
+      border-radius: 50%;
+      max-height: 42px;
+      max-width: 42px;
+      display: inline-block;
+      margin: auto;
+    }
+
+    .target-header {
+      font-size: 16px;
+    }
+
+    .el-container {
+      //background-color: #fff;
+      color: #333;
+      padding-top: 5px;
+    }
+
+    .el-main {
+      padding: 0px;
+      .el-container {
+        padding: 5px;
+      }
+
+    }
+    .el-checkbox__label {
+      margin-right: 5px;
+    }
+    .el-header {
+      padding-top: 5px;
+      height: 32px !important;
+      line-height: 27px;
+      font-size: 16px;
+      background-color: #f0f3f5;
+      border: 1px solid #c2cfd6;
+      .rightaligndiv {
+        text-align: right;
+      }
+
+    }
+    @media screen and (max-width: 599px) {
+      .container-fluid {
+        padding: 0px 5px !important;
+      }
+      .timeline-page {
+        .el-header {
+          height: 32px !important;
+        }
+      }
+    }
+  }
+</style>

@@ -1,0 +1,1243 @@
+<template>
+  <div class="timeline-page">
+    <div id="mySidenav" class="sidenav border-box">
+      <a href="javascript:void(0)" class="closebtn" @click="closeNav()">&times;</a>
+      <div id="main">
+        <el-select v-model="selectedProject" clearable placeholder="Dự án" @change="changeProject(selectedProject)">
+          <el-option v-for="item in dataPr" :key="item.GroupId" :label="item.GroupName" :value="item.GroupId">
+          </el-option>
+        </el-select>
+        <el-select v-model="selectedStatus" placeholder="Trạng thái" @change="getDataByStatus(selectedStatus)"
+                   clearable>
+          <el-option v-for="item in ListStatus" :key="item.Id" :value="item.Id" :label="item.Name"/>
+        </el-select>
+        <div class="row chkbx">
+          <el-checkbox v-model="deadlineCheckbox" @change="changeDeadlineCheckBox()">Đến hạn</el-checkbox>
+        </div>
+        <div class="row chkbx">
+          <el-checkbox v-model="overdateCheckbox" @change="changeOverdateCheckBox()">Quá hạn</el-checkbox>
+        </div>
+      </div>
+    </div>
+    <el-row :gutter="20" :class="$isMobileDevice? 'padding-0': '' ">
+      <el-col :xs="24" :sm="24" :md="18" :lg="18" :class="$isMobileDevice? 'padding-0': 'pr-2'">
+        <el-container :class="$isMobileDevice? 'padding-0': '' ">
+          <el-header style="padding: 0px 5px;">
+            <el-row style="width: 100%">
+              <el-col :span="$isMobileDevice ? 18 : 6" class="leftaligndiv text-nowrap">
+
+                <span style="font-size: 14px; padding-left: 5px;">
+                  <i class="fa fa-list-alt"></i><span><b> Thời gian</b></span>
+                </span>
+
+                <router-link v-if="$isMobileDevice"
+                             :to="{ path: '/dynamic/view-all-task-page', query: {PlanStartDateStartValue: dateValString[0], PlanStartDateEndValue: dateValString[1] }}"
+                             class=""><i class="fa fa-table"></i><span> Danh sách</span></router-link>
+                <router-link v-if="$isMobileDevice" to="/scrumboard" class=""><i class="fa fa-trello"></i><span>  Bảng</span>
+                </router-link>
+              </el-col>
+              <el-col :span="$isMobileDevice ? 6 : 18" class="rightaligndiv">
+                <el-checkbox v-model="deadlineCheckbox" v-show="!$isMobileDevice" @change="changeDeadlineCheckBox()">Đến
+                  hạn
+                </el-checkbox>
+                <el-checkbox v-model="overdateCheckbox" v-show="!$isMobileDevice" @change="changeOverdateCheckBox()">Quá
+                  hạn
+                </el-checkbox>
+                <el-select v-model="selectedProject" clearable placeholder="Dự án"
+                           @change="changeProject(selectedProject)" v-show="!$isMobileDevice">
+                  <el-option v-for="item in dataPr" :key="item.GroupId" :label="item.GroupName" :value="item.GroupId">
+                  </el-option>
+                </el-select>
+                <el-select v-model="selectedStatus" placeholder="Trạng thái" @change="getDataByStatus(selectedStatus)"
+                           v-show="!$isMobileDevice" clearable>
+                  <el-option v-for="item in ListStatus" :key="item.Id" :value="item.Id" :label="item.Name"/>
+                </el-select>
+                <i class="fa fa-filter fa-lg" style="color: #00aced" @click="openFilter()"
+                   v-show="$isMobileDevice && (selectedStatus !== '' || selectedProject !== '' || deadlineCheckbox || overdateCheckbox)"></i>
+                <i class="fa fa-filter fa-lg" @click="openFilter()"
+                   v-show="$isMobileDevice && selectedStatus === '' && selectedProject === '' && !deadlineCheckbox && !overdateCheckbox"></i>
+              </el-col>
+            </el-row>
+          </el-header>
+          <el-main>
+            <el-container direction="vertical">
+              <v-infinite-scroll @bottom="loadmore()" @top="reload()" :offset='0' class="left-scroll">
+                <div v-show="loadingUp" style="text-align: center"><i class="el-icon-loading"></i>&nbsp; Đang tải...
+                </div>
+                <el-card v-for="item in timeline" :key="item.Id" class="box-card">
+                  <div class="text item">
+                    <el-row style="display: flex; align-items: center">
+                      <el-col :xs="4" :md="3" class="mr-2">
+                        <div>
+                          <div style="text-align: center">
+                            <img :src="listAvatar[item.Worker]" class="round-image"/>
+                          </div>
+                          <div style="text-align: center">
+                            <div style="overflow: hidden">{{item.WorkerName}}</div>
+                            <div class="b-600">{{item.dayAgo}}</div>
+                          </div>
+                        </div>
+                      </el-col>
+                      <el-col :xs="20" :md="21">
+                        <el-row>
+                          <span class="b-600">Công việc:
+                            <a href="javascript:void(0)" @click="showTaskDetail(item)">
+                              <span
+                                :style="'text-decoration:' + (item.isDone ? 'line-through' : '')">
+                                {{item.Index}} - {{item.Name}}
+                              </span>
+                            </a>
+                          </span>
+                          <br/>
+                          <span><span class="b-600">Mục tiêu: </span> {{item.TargetsName && item.TargetsName!==''? item.TargetsName: '---'}}</span>
+                          <br/>
+                          <span><span class="b-600">Dự án: </span> {{item.VersionProjectName && item.VersionProjectName!==''? item.VersionProjectName: '---'}}</span>
+                          <br/>
+                          <span><span class="b-600">Bắt đầu: </span> {{item.PlanStartDateDisplay}} | <span
+                            class="b-600">Ước tính: </span> {{item.PlanManHour}} | <span
+                            class="b-600">Kết thúc:  </span>{{item.DeadlineDisplay}} | <span
+                            class="b-600">Thực tế: </span> {{item.RemainingManHour}}</span>
+                        </el-row>
+                        <el-row>
+                          <el-col :xs="24" :md="6">
+                            <el-row style="text-align: left;">
+                              <el-col :xs="12" :md="11"><span class="b-600">Hoàn thành:</span></el-col>
+                              <el-col :xs="12" :md="13">
+                                <div class="span-block-border">
+                                  <el-progress :text-inside="true" :stroke-width="18" :percentage="item.Progress"/>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col :xs="24" :md="5">
+                            <el-row style="text-align: left;">
+                              <el-col :xs="12" :md="11"><span class="b-600">Ưu tiên: </span></el-col>
+                              <el-col :xs="12" :md="13">
+                                <div class="span-block-border"
+                                     :style="'background-color:'+ item.priorityColor"><span>{{item.PriorityIdName}}</span>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col :xs="24" :md="7">
+                            <el-row style="text-align: left;">
+                              <el-col :xs="12" :md="11"><span class="b-600">Trạng thái: </span></el-col>
+                              <el-col :xs="12" :md="13">
+                                <div class="span-block-border" :style="'background-color:'+ item.statusColor"><span>{{item.StatusName}}</span>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col v-if="!$isMobileDevice" :md="6">
+                            <el-row>
+                              <el-col :span="6" :offset="8">
+                                <div :class="parseFloat(item.overHours+ '') < 0 ? 'red-badge':''">
+                                  <el-badge :value="item.overHours " :max="99" class="item">
+                                    <i class="fa fa-clock-o "></i>
+                                  </el-badge>
+                                </div>
+                              </el-col>
+                              <el-col :span="4">
+                                <el-badge :value="item.TotalDownload ? item.TotalDownload : 0" :max="99" class="item">
+                                  <i class="fa fa-paperclip "></i>
+                                </el-badge>
+
+                              </el-col>
+                              <el-col :span="4">
+                                <el-badge :value="item.TotalComment ? item.TotalComment : 0" :max="99" class="item" style="cursor: pointer">
+                                  <i class="fa fa-comment-o " @click="showTaskDetail(item, true)"></i>
+                                </el-badge>
+                              </el-col>
+                              <el-col :span="2" style="cursor: pointer">
+                                <div
+                                  v-if="!(item.Subscribe && item.Subscribe.indexOf($Utils.getUserInfo('UserId'))!=-1)"
+                                  @click="subscribe(item, false)">
+                                  <i class="fa fa-flag-o "></i>
+                                </div>
+                                <div v-else style="color: red" @click="subscribe(item, true)">
+                                  <i class="fa fa-flag-o "></i>
+                                </div>
+                              </el-col>
+                            </el-row>
+                          </el-col>
+                          <el-col v-else class="hr">
+                            <div class="row">
+                            <div :class="parseFloat(item.overHours+ '') < 0 ? 'red-badge col':'col' ">
+                              <el-badge :value="item.overHours " :max="99" class="item">
+                                <i class="fa fa-clock-o "></i>
+                              </el-badge>
+                            </div>
+                            <div class="col">
+                              <el-badge :value="item.TotalDownload ? item.TotalDownload : 0" :max="99" class="item">
+                                <i class="fa fa-paperclip "></i>
+                              </el-badge>
+                            </div>
+                            <div class="col">
+                              <el-badge :value="item.TotalComment ? item.TotalComment : 0" :max="99" class="item" style="cursor: pointer">
+                                <i class="fa fa-comment-o " @click="showTaskDetail(item, true)"></i>
+                              </el-badge>
+                            </div>
+                            <div class="col">
+                              <div v-if="!(item.Subscribe && item.Subscribe.indexOf($Utils.getUserInfo('UserId'))!=-1)"
+                                @click="subscribe(item, false)">
+                                <i class="fa fa-flag-o "></i>
+                              </div>
+                              <div v-else style="color: red" @click="subscribe(item, true)">
+                                <i class="fa fa-flag-o "></i>
+                              </div>
+                            </div>
+                          </div>
+                          </el-col>
+                        </el-row>
+                      </el-col>
+                    </el-row>
+
+                  </div>
+                </el-card>
+                <br/>
+                <div v-show="loadingDown" style="text-align: center"><i class="el-icon-loading"></i>&nbsp; Đang tải...
+                </div>
+                <el-card v-if="!loadingDown && loadingUp && timeline.length == 0" class="box-card">
+                  <div class="center-div">Không có dữ liệu</div>
+                </el-card>
+              </v-infinite-scroll>
+            </el-container>
+          </el-main>
+        </el-container>
+      </el-col>
+      <el-col :md="6" :lg="6" class="hidden-sm-and-down pl-2">
+        <el-container direction="vertical" class="status">
+          <el-row style="width: 100%;">
+            <el-header>
+              <span>Công việc theo trạng thái</span>
+            </el-header>
+            <el-main>
+              <el-container direction="vertical" style="background-color: #fff">
+                <el-row style="width: 100%" v-for="item in ListStatus" :key="item.Id">
+                  <el-col :span="6">
+                    {{item.Name}}
+                  </el-col>
+                  <el-col :span="4">
+                    {{item.Count}}
+                  </el-col>
+                  <el-col :span="14">
+                    <el-progress :percentage="item.Percentage" :text-inside="true" :stroke-width="18"
+                                 :color="item.Color">
+                    </el-progress>
+                  </el-col>
+                </el-row>
+              </el-container>
+            </el-main>
+          </el-row>
+          <el-row style="width: 100%;">
+            <el-header>
+              <span>Công việc theo tiến độ</span>
+            </el-header>
+            <el-main>
+              <el-container direction="vertical" style="background-color: #fff">
+                <el-row style="width: 100%" v-for="item in overDueTask" :key="item.Id">
+                  <el-col :span="6">
+                    {{item.Name}}
+                  </el-col>
+                  <el-col :span="4">
+                    {{item.Count}}
+                  </el-col>
+                  <el-col :span="14">
+                    <el-progress :percentage="item.Percentage" :text-inside="true" :stroke-width="18"
+                                 :color="item.Color">
+                    </el-progress>
+                  </el-col>
+                </el-row>
+              </el-container>
+            </el-main>
+          </el-row>
+          <el-row style="width: 100%;">
+            <el-header>
+              <span>Danh mục mục tiêu</span>
+            </el-header>
+            <el-main class="right-scroll">
+              <el-card class="box-card" v-for="item in listTargetDetail" :key="item.Id">
+                <div slot="header" class="clearfix">
+                  <a href="#" class="target-header">{{item.Name}}</a>
+                  <div class="owner">
+                    <div v-if="item.TargetType == 1">
+                      <i class="fa fa-users fa-lg mt-4"></i><span><b> Phòng:</b> {{item.GroupName}} <br/> <b>Loại:</b> {{ListType[item.TargetType -1].Name}}</span>
+                    </div>
+                    <div v-if="item.TargetType != 1">
+                      <i class="fa fa-user fa-lg mt-4"></i><span><b> Quản lý:</b> {{item.OwnerName}} <br/> <b>Loại:</b> {{ListType[item.TargetType -1].Name}}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="bdCt text item">
+                  <el-progress :text-inside="true" :stroke-width="18" :percentage="item.Progress"
+                               style="width: 90%; margin: auto"/>
+                </div>
+              </el-card>
+            </el-main>
+          </el-row>
+        </el-container>
+      </el-col>
+    </el-row>
+  </div>
+</template>
+<script>
+import Vue from "vue";
+import InfiniteScroll from "v-infinite-scroll";
+import ShowTaskDetail from "@/components/static/ShowTaskDetail";
+
+Vue.use(InfiniteScroll);
+export default {
+  inject: [
+    "statusColors",
+    "priorityColors",
+    "taskDone",
+    "overHours",
+    "listStatus",
+    "loggedUser",
+    "SessionId"
+  ],
+  props: ["default", "sidebar"],
+  data() {
+    return {
+      //listStatus: [],
+      dateVal: null,
+      selectedStatus: "",
+      listStatuscount: [],
+      ListStatus: [],
+      ListTimeStatus: [],
+      Total: 0,
+      listTargetDetail: [],
+      timeline: [],
+      startIndex: 0,
+      endIndex: 20,
+      datenow: new Date(),
+      start: "",
+      end: "",
+      datetimeFormat: "DD-MM-YYYY",
+      requestDatetimeFormat: "YYYY-MM-DDThh:mm:ss",
+      ListType: [
+        {
+          Id: "1",
+          Name: "Mục tiêu công ty"
+        },
+        {
+          Id: "2",
+          Name: "Mục tiêu phòng ban"
+        },
+        {
+          Id: "3",
+          Name: "Mục tiêu cá nhân"
+        }
+      ],
+      loggedOnUser: JSON.parse(localStorage.getItem("LoggedOnUser")),
+      loadingUp: false,
+      loadingDown: false,
+      dataLU: [],
+      dataListUser: [],
+      isSystemAdmin: this.$isSystemAdmin(),
+      isMantisAdmin: this.$isMantisAdmin(),
+      base: this.$appUri.BaseURL === "/" ? "" : this.$appUri.BaseURL,
+      listAvatar: {},
+      selectedWorker: "",
+      dataPr: [],
+      ListGroup: [],
+      selectedProject: "",
+      deadlineCheckbox: false,
+      overdateCheckbox: false
+    };
+  },
+  computed: {
+    dateValString() {
+      if (this.dateVal == null) return this.$rootScope.dateFilter;
+      return [
+        Vue.moment(this.dateVal[0]).format("YYYY-MM-DD") + "T00:00:00",
+        Vue.moment(this.dateVal[1]).format("YYYY-MM-DD") + "T23:59:59"
+        /* Vue.moment(this.dateVal[0]).format(this.requestDatetimeFormat),
+          Vue.moment(this.dateVal[1]).format(this.requestDatetimeFormat) */
+      ];
+      //else return
+    },
+    overDueTask() {
+      var isAdmin = this.$isSystemAdmin || this.$isMantisAdmin;
+      var today = this.timeline.filter(item => {
+        return (
+          this.taskDone.indexOf(item.Status) == -1 &&
+          this.$Utils.formatDateTime(item.Deadline, "DD/MM/YYYY") ==
+            this.$Utils.formatDateTime(new Date(), "DD/MM/YYYY") &&
+          (isAdmin ||
+            item.Worker.toUpperCase() == this.loggedOnUser.Id.toUpperCase())
+        );
+      });
+      var overHours = this.timeline.filter(item => {
+        return (
+          this.taskDone.indexOf(item.Status) == -1 &&
+          parseFloat(item.overHours + "") < 0 &&
+          (isAdmin ||
+            item.Worker.toUpperCase() == this.loggedOnUser.Id.toUpperCase())
+        );
+      });
+
+      //item.Count > 0 ? Math.round(item.Count * 100 / this.Total) : 0
+      return [
+        {
+          Name: "Đến hạn",
+          Count: today.length,
+          Percentage:
+            today.length > 0
+              ? Math.round(today.length * 100 / this.timeline.length) > 100
+                ? 100
+                : Math.round(today.length * 100 / this.timeline.length)
+              : 0,
+          Color: "Yellow"
+        },
+        {
+          Name: "Quá hạn",
+          Count: overHours.length,
+          Percentage:
+            overHours.length > 0
+              ? Math.round(overHours.length * 100 / this.timeline.length) > 100
+                ? 100
+                : Math.round(overHours.length * 100 / this.timeline.length)
+              : 0,
+          Color: "Red"
+        }
+      ];
+    }
+  },
+  methods: {
+    beautifyTarget(TargetLV1, TargetLV2, TargetLV3) {
+      var str = TargetLV1 && TargetLV1 != "" ? TargetLV1 + ";" : "";
+      str += TargetLV2 && TargetLV2 != "" ? TargetLV2 + ";" : "";
+      str += TargetLV3 && TargetLV3 != "" ? TargetLV3 + ";" : "";
+
+      return str == "" ? "---" : str;
+    },
+    changeDeadlineCheckBox() {
+      if (this.overdateCheckbox === true) {
+        this.overdateCheckbox = false;
+      }
+      this.closeNav();
+      this.loadTask();
+    },
+    changeOverdateCheckBox() {
+      if (this.deadlineCheckbox === true) {
+        this.deadlineCheckbox = false;
+      }
+      this.closeNav();
+      this.loadTask();
+    },
+    openFilter() {
+      document.getElementById("mySidenav").style.width = "210px";
+    },
+    closeNav() {
+      document.getElementById("mySidenav").style.width = "0";
+    },
+    openTaskDetail(index) {
+      //this.$router.push({ path: '/dynamic/view/', query: { index:index }})
+      this.$router.push("/dynamic/view/Index=" + index);
+    },
+    getDayAgo(item) {
+      if (item != undefined) {
+        var dateNow = this.$Utils.formatDateTime(Date.Now, "DD/MM/YYYY");
+        var temp = this.$Utils.formatDateTime(item, "DD/MM/YYYY");
+        if (dateNow === temp) {
+          var date = new Date();
+          var currentDate = new Date(item);
+          var t = date - currentDate;
+          if (Math.round(t / 60 / 60 / 1000) > 0) {
+            return Math.round(t / 60 / 60 / 1000) + " giờ trước ";
+          } else if (Math.round(t / 60 / 1000) <= 0) {
+            return "Vừa xong";
+          } else {
+            return Math.round(t / 60 / 1000) + " phút trước";
+          }
+        }
+
+        var diff = Math.round(
+          Math.abs((new Date() - new Date(item)) / (24 * 60 * 60 * 1000))
+        );
+        return diff + " ngày trước";
+      } else {
+        return "";
+      }
+    },
+    changeProject(item) {
+      this.selectedProject = item;
+      this.startIndex = 0;
+      this.endIndex = 20;
+      this.closeNav();
+      this.loadTask();
+    },
+    searchGroupOfUser() {
+      var request = this.$Lodash.cloneDeep(this.$singleRequest);
+      request.R1_RequestTemplate = "tblGroup.Search";
+      request.R1_RequestDataGroup = "DataGroup.quan-ly-du-an.053gf";
+      request.R1_RequestFields = "GroupId;GroupName;GroupType;";
+      request.R1_GroupType = 4;
+      request.R1_GroupId = "";
+      if (!this.$isSystemAdmin() && !this.$isMantisAdmin())
+        request.R1_AssignedUser = this.$getItemLocalStorage(
+          this.$localStorageConstant.SessionId
+        );
+      this.$Utils.post(request).then(data => {
+        this.dataPr = this.$Utils.getDataWithRoot(data.R1, "Data.UserDS.Group");
+      });
+    },
+    reload() {
+      this.loadingUp = true;
+      this.startIndex = 0;
+      this.endIndex = 20;
+      this.loadTask(false, true);
+    },
+    loadmore() {
+      this.loadingDown = true;
+      this.startIndex = this.endIndex + 1;
+      this.endIndex += 20;
+      this.loadTask(false, true);
+    },
+    getDataByStatus(status) {
+      this.selectedStatus = status;
+      this.closeNav();
+      this.reload();
+    },
+    loadTask(first, scroll) {
+      var taskRequest = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: 1,
+        R1_RequestTemplate: "AG_Task_Task.Search",
+        R1_RequestDataGroup: "DataGroup.danh-sach-cong-viec.04b66",
+        R1_RequestFields:
+          "TotalDownload;TotalComment;Id;Index;Name;Status;Progress;StatusName;Content;PriorityIdName;PriorityId;PlanStartDate;Deadline;Modified;" +
+          "Manager;Worker;WorkerName;TaskRequest;StatusDisplay;StatusDisplayName;RestTime;RemainingManHour;PlanManHour;TargetsName;TargetsLevel1;TargetsLevel2;" +
+          "TargetsLevel3;TargetsLevel4;CategoriesLevel5;ProjectCategoriesLevel1;ProjectCategoriesLevel2;ChosenOneName;Targets;Subscribe;VersionProject;VersionProjectName",
+        R1_StartIndex: this.startIndex,
+        R1_EndIndex: this.endIndex,
+        R1_AssignedUser: this.$getItemLocalStorage(
+          this.$localStorageConstant.SessionId
+        ),
+        R1_RequestOrderFields: "Modified DESC",
+        R1_PlanStartDateStartValue: this.start,
+        R1_PlanStartDateEndValue: this.end
+      };
+      if (this.selectedStatus !== "") {
+        taskRequest.R1_Status = this.selectedStatus;
+      }
+      if (this.selectedWorker !== "") {
+        taskRequest.R1_Worker = this.selectedWorker;
+      }
+      if (this.selectedProject !== "") {
+        taskRequest.R1_VersionProject = this.selectedProject;
+      }
+      if (this.$route && first) {
+        if (this.$route.query) {
+          $.each(this.$route.query, (key, value) => {
+            if (value !== "" && value) {
+              taskRequest["R1_" + key] = value;
+              taskRequest["R2_" + key] = value;
+            }
+            if (key === "VersionProject") {
+              this.selectedProject = value;
+            }
+          });
+        }
+      }
+      if (!first) {
+        if (this.selectedStatus !== "") {
+          taskRequest.R1_Status = this.selectedStatus;
+        }
+        if (this.selectedWorker !== "") {
+          taskRequest.R1_Worker = this.selectedWorker;
+        }
+        if (this.selectedProject !== "") {
+          taskRequest.R1_VersionProject = this.selectedProject;
+        }
+        taskRequest.R1_PlanStartDateStartValue = this.start;
+        taskRequest.R1_PlanStartDateEndValue = this.end;
+      }
+
+      if (this.deadlineCheckbox === true && this.overdateCheckbox === false) {
+        taskRequest.R1_DeadlineStartValue = this.$Utils.formatDateTime(
+          new Date()
+        );
+        taskRequest.R1_DeadlineEndValue = this.$Utils.formatDateTime(
+          new Date(),
+          "YYYY-MM-DDT23:59:59"
+        );
+        taskRequest.R1_Status =
+          "db8e700c-78c6-4f35-9477-36e0335888f5;fab4fa55-cf1d-4625-8f65-8b43e832061b;05625d94-3884-4f00-9918-254c1216c6cd;5756c3d9-37a8-4032-bd6c-2a01161b73c7;bbc399a9-a2b4-45ad-b948-32e5623dc021";
+      }
+
+      if (this.overdateCheckbox === true && this.deadlineCheckbox === false) {
+        taskRequest.R1_DeadlineStartValue = this.$Utils.formatDateTime(
+          this.start,
+          "YYYY-MM-DDT00:00:00"
+        );
+        taskRequest.R1_DeadlineEndValue = this.$Utils.formatDateTime(
+          new Date()
+        );
+        taskRequest.R1_Status =
+          "db8e700c-78c6-4f35-9477-36e0335888f5;fab4fa55-cf1d-4625-8f65-8b43e832061b;05625d94-3884-4f00-9918-254c1216c6cd;5756c3d9-37a8-4032-bd6c-2a01161b73c7;bbc399a9-a2b4-45ad-b948-32e5623dc021";
+      }
+      if (scroll === true) {
+        this.$Utils.post(taskRequest).then(taskdata => {
+          taskdata = this.$Utils.getDataWithRoot(
+            taskdata,
+            "R1.Data.TasksDS.Task"
+          );
+          if (this.startIndex === 0) {
+            this.timeline = taskdata;
+          } else {
+            this.timeline = this.timeline.concat(taskdata);
+          }
+          this.timeline.filter(item => {
+            var temp = this.$Utils.expressionToString(
+              item,
+              "{{Deadline|DateTime:toNows}}"
+            );
+            item.overHours = this.overHours(item);
+            if (item.TargetsName) {
+              var arrTargetName = item.TargetsName.split(";");
+              if (arrTargetName[0]) {
+                item.TargetLV1 = arrTargetName[0];
+              }
+              if (arrTargetName[1]) {
+                item.TargetLV2 = arrTargetName[1];
+              }
+              if (arrTargetName[2]) {
+                item.TargetLV3 = arrTargetName[2];
+              }
+            }
+            item.dayAgo = this.getDayAgo(item.Modified);
+
+            if (isNaN(item.Progress) || item.Progress === undefined) {
+              item.Progress = 0;
+            } else {
+              item.Progress = Math.round(parseFloat(item.Progress));
+            }
+            if (item.Progress > 100) item.Progress = 100;
+            item.DeadlineDisplay = this.$Utils.formatDateTime(
+              item.Deadline,
+              "DD/MM/YYYY"
+            );
+            item.PlanStartDateDisplay = this.$Utils.formatDateTime(
+              item.PlanStartDate,
+              "DD/MM/YYYY"
+            );
+            item.isDone = this.taskDone.indexOf(item.Status) > -1;
+            if (item.TargetsName)
+              item.TargetsName = item.TargetsName.replaceAll(";", ", ");
+            item.priorityColor = this.priorityColors[
+              item.PriorityId.toUpperCase()
+            ];
+            item.statusColor = this.statusColors[item.Status.toUpperCase()];
+          });
+          this.loadingUp = false;
+          this.loadingDown = false;
+        });
+      } else {
+        this.$Utils.postCheckResult(taskRequest).then(taskdata => {
+          taskdata = this.$Utils.getDataWithRoot(
+            taskdata,
+            "R1.Data.TasksDS.Task"
+          );
+          if (this.startIndex === 0) {
+            this.timeline = taskdata;
+          } else {
+            this.timeline = this.timeline.concat(taskdata);
+          }
+          this.timeline.filter(item => {
+            var temp = this.$Utils.expressionToString(
+              item,
+              "{{Deadline|DateTime:toNows}}"
+            );
+            item.overHours = this.overHours(item);
+            if (item.TargetsName) {
+              var arrTargetName = item.TargetsName.split(";");
+              if (arrTargetName[0]) {
+                item.TargetLV1 = arrTargetName[0];
+              }
+              if (arrTargetName[1]) {
+                item.TargetLV2 = arrTargetName[1];
+              }
+              if (arrTargetName[2]) {
+                item.TargetLV3 = arrTargetName[2];
+              }
+            }
+            item.dayAgo = this.getDayAgo(item.Modified);
+
+            if (isNaN(item.Progress) || item.Progress === undefined) {
+              item.Progress = 0;
+            } else {
+              item.Progress = Math.round(parseFloat(item.Progress));
+            }
+            if (item.Progress > 100) item.Progress = 100;
+            item.DeadlineDisplay = this.$Utils.formatDateTime(
+              item.Deadline,
+              "DD/MM/YYYY"
+            );
+            item.PlanStartDateDisplay = this.$Utils.formatDateTime(
+              item.PlanStartDate,
+              "DD/MM/YYYY"
+            );
+            item.isDone = this.taskDone.indexOf(item.Status) > -1;
+            if (item.TargetsName)
+              item.TargetsName = item.TargetsName.replaceAll(";", ", ");
+            item.priorityColor = this.priorityColors[
+              item.PriorityId.toUpperCase()
+            ];
+            item.statusColor = this.statusColors[item.Status.toUpperCase()];
+          });
+          this.loadingUp = false;
+          this.loadingDown = false;
+        });
+      }
+    },
+    loadStatusData(first) {
+      var request = this.$Lodash.cloneDeep(this.$singleRequest);
+      var listStatus = Object.values(this.listStatus);
+      request.TotalRequests = listStatus.length;
+      for (var i = 0; i < listStatus.length; i++) {
+        request["R" + (i + 1) + "_RequestTemplate"] = "AG_Task_Task.Count";
+        request["R" + (i + 1) + "_RequestDataGroup"] =
+          "DataGroup.danh-sach-cong-viec.04b66";
+        request["R" + (i + 1) + "_PlanStartDateStartValue"] = this.start;
+        request["R" + (i + 1) + "_PlanStartDateEndValue"] = this.end;
+        request["R" + (i + 1) + "_Status"] = listStatus[i].Id;
+        request["R" + (i + 1) + "_AssignedUser"] = this.SessionId;
+        if (this.selectedWorker) {
+          request["R" + (i + 1) + "_Worker"] = this.selectedWorker;
+        }
+        if (this.$route) {
+          if (this.$route.query) {
+            $.each(this.$route.query, function(key, value) {
+              if (value !== "" && value) {
+                request["R" + (i + 1) + "_" + key] = value;
+                // request["R2_"+key] = value;
+              }
+            });
+          }
+        }
+        if (!first) {
+          if (this.selectedWorker) {
+            request["R" + (i + 1) + "_Worker"] = this.selectedWorker;
+          }
+          request["R" + (i + 1) + "_PlanStartDateStartValue"] = this.start;
+          request["R" + (i + 1) + "_PlanStartDateEndValue"] = this.end;
+        }
+      }
+      this.$Utils.post(request).then(data => {
+        this.listStatuscount = [];
+        this.ListStatus = [];
+        this.Total = 0;
+        for (var i = 0; i < listStatus.length; i++) {
+          var count = this.$Utils.getDataWithRoot(data["R" + (i + 1)], "Data");
+          count = parseInt(count);
+          this.Total += count;
+          var obj = {
+            Name: listStatus[i].Name,
+            Count: count,
+            Id: listStatus[i].Id,
+            Color: listStatus[i].Color
+          };
+          this.listStatuscount.push(obj);
+        }
+        this.listStatuscount.forEach(item => {
+          var newObj = {
+            Name: item.Name,
+            Count: item.Count,
+            Id: item.Id,
+            Color: item.Color,
+            Percentage:
+              item.Count > 0
+                ? Math.round(item.Count * 100 / this.Total) > 100
+                  ? 100
+                  : Math.round(item.Count * 100 / this.Total)
+                : 0
+          };
+          this.ListStatus.push(newObj);
+        });
+      });
+      //});
+    },
+    searchAvatar() {
+      var request = {
+        RequestAction: "SearchUserWithGroups",
+        IncludedGroupManager: "true",
+        RequestClass: "BPM",
+        RequestDataType: "json",
+        ConditionFields: "IncludedGroupManager;Group;Status;LoginName",
+        StaticFields: "UserId;Username;LoginName;Description;Status;",
+        DynamicFields:
+          "Avatar;Facebook;Email;Skype;Birthday;Biography;WorkProcess;Telephone",
+        StructFields: "GroupRoot;GroupRootName;",
+        OrderFields: "LoginName ASC",
+        GroupType: "1"
+        //Status: 1
+      };
+
+      this.$Utils.post(request).then(users => {
+        users = this.$Utils.getDataWithRoot(users, "Data.UserDS.User");
+        this.dataLU = users;
+        users.forEach(user => {
+          this.$set(this.listAvatar, user.UserId, this.loadAvatar(user.Avatar));
+        });
+      });
+    },
+    loadAvatar(avatar) {
+      if (avatar == undefined) avatar = "assets/images/avatars/profile.png";
+      avatar = avatar.replace("profile.jpg", "profile.png");
+      var strAvatar =
+        avatar === "assets/images/avatars/profile.png"
+          ? this.$appUri.BaseURL + avatar
+          : this.$appUri.BaseURL +
+            avatar.replace("/", "") +
+            "&Height=50&Width=50";
+
+      return strAvatar;
+    },
+    showTaskDetail(item, flag) {
+      if (flag) {
+        this.$set(item, "activeName", flag);
+        this.$hub.$emit(
+          "set-modal-data",
+          "Chi tiết công việc",
+          "60%",
+          true,
+          "center",
+          ShowTaskDetail,
+          true,
+          "",
+          item
+        );
+      } else {
+        this.$hub.$emit(
+          "set-modal-data",
+          "Chi tiết công việc",
+          "60%",
+          true,
+          "center",
+          ShowTaskDetail,
+          true,
+          "",
+          item
+        );
+      }
+    },
+    subscribe(item, isUnsubscribe) {
+      var cachedSubscribe = item.Subscribe + "";
+      if (isUnsubscribe) {
+        item.Subscribe =
+          item.Subscribe.split(";")
+            .filter(ele => {
+              return ele != this.$Utils.getUserInfo("UserId");
+            })
+            .join(";") + ";";
+      } else {
+        item.Subscribe =
+          (item.Subscribe ? item.Subscribe : "") +
+          this.$Utils.getUserInfo("UserId");
+      }
+      if (!isUnsubscribe) {
+        var linkSubcribe = {
+          RequestClass: "xBase",
+          Parent: item.Id,
+          Child: this.$Utils.getUserInfo("UserId"),
+          Code: "Subscribe",
+          Name: "Subscribe",
+          RequestAction: "LinkUserToObject",
+          ParentTable: "xObject",
+          ChildTable: "tblUser",
+          RequestTemplate: "Permission.Insert"
+        };
+        this.$Utils.post(linkSubcribe).then(ldata => {
+          // console.log('linkSubcribe', ldata)
+        });
+
+        var linkEmailIns = {
+          RequestClass: "xBase",
+          Parent: item.Id,
+          Child: this.$Utils.getUserInfo("UserId"),
+          Code: "Email",
+          Name: "Email",
+          RequestAction: "LinkUserToObject",
+          ParentTable: "xObject",
+          ChildTable: "tblUser",
+          RequestTemplate: "Permission.Insert"
+        };
+        this.$Utils.post(linkEmailIns).then(ldata => {
+          //console.log(ldata)
+        });
+      } else {
+        var linkEmail = {
+          RequestAction: "SearchLinked",
+          RequestClass: "Addition",
+          ConditionFields: "Parent;Code;Child",
+          StaticFields: "Code;Child;Parent;Name;Created;Description",
+          OrderFields: "Created DESC",
+          Parent: item.Id,
+          Child: this.$Utils.getUserInfo("UserId"),
+          Code: "Subscribe;Email"
+        };
+        this.$Utils.post(linkEmail).then(result => {
+          var arrLink =
+            result.TotalCount == 1
+              ? [result.Data.DataDS.Linked]
+              : result.Data.DataDS.Linked;
+          if (arrLink == undefined) return;
+          var removeLinks = {
+            RequestClass: "xBase",
+            RequestAction: "Request",
+            TotalRequests: arrLink.length,
+            RequestTemplate: "Permission.Remove"
+          };
+          $.each(arrLink, (key, link) => {
+            removeLinks["R" + (key + 1) + "_Id"] = link.Id;
+            removeLinks["R" + (key + 1) + "_Parent"] = link.Parent;
+            removeLinks["R" + (key + 1) + "_Child"] = link.Child;
+            removeLinks["R" + (key + 1) + "_Code"] = link.Code;
+          });
+          this.$Utils.post(removeLinks).then(data => {});
+        });
+      }
+      var request = {
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        TotalRequests: 1,
+        R1_RequestTemplate: "AG_Task_Task.Update",
+        R1_RequestDataGroup: "DataGroup.danh-sach-cong-viec.04b66",
+        R1_RequestFields: "Id;Subscribe",
+        R1_Id: item.Id,
+        R1_Subscribe: item.Subscribe
+      };
+      this.$Utils.post(request).then(data => {
+        if (data.success) {
+          // this.$Utils.showMessage(
+          //   "success",
+          //   isUnsubscribe ? "Đã huỷ đăng ký" : "Đã đăng ký theo dõi"
+          // );
+        } else {
+          item.Subscribe = cachedSubscribe;
+          this.$message.error("Có lỗi");
+        }
+        this.$forceUpdate();
+      });
+    }
+  },
+
+  created() {
+    this.model = {};
+  },
+  mounted() {
+    this.searchAvatar();
+    if (this.$rootScope.selectedWorkerId) {
+      this.$rootScope.selectedWorkerId.forEach(item => {
+        this.selectedWorker += item + ";";
+      });
+    }
+    this.searchGroupOfUser();
+    if (this.$rootScope.dateFilter && this.$rootScope.dateFilter.length > 2) {
+      this.start =
+        Vue.moment(this.$rootScope.dateFilter[0]).format("YYYY-MM-DD") +
+        "T00:00:00";
+      this.end =
+        Vue.moment(this.$rootScope.dateFilter[1]).format("YYYY-MM-DD") +
+        "T23:59:59";
+    }
+    this.$hub.$on("datePicked", data => {
+      this.start = Vue.moment(data[0]).format("YYYY-MM-DD") + "T00:00:00";
+      this.end = Vue.moment(data[1]).format("YYYY-MM-DD") + "T23:59:59";
+
+      this.loadStatusData();
+      this.loadTask();
+    });
+    this.$hub.$on("workerPicked", data => {
+      var selectedUser = "";
+      data.forEach(item => {
+        selectedUser += item + ";";
+      });
+      this.selectedWorker = selectedUser;
+      this.loadStatusData();
+      this.loadTask();
+    });
+
+    this.loadStatusData(true);
+    this.loadTask(true);
+
+    this.model.Project = [this.loggedOnUser.Project.GroupId];
+    var requestSearch = this.$Utils.updateParamsSingleRequest(
+      this.$Lodash.cloneDeep(this.$singleRequest),
+      {
+        ParentCode: "xSetting.Project.Parameter.Organization.Target",
+        RequestOrderFields: "LeftIndex ASC",
+        RequestClass: "xBase",
+        RequestAction: "Request",
+        RequestDataGroup: "DataGroup.muc-tieu.091fb",
+        RequestFields:
+          "Plan;Done;Progress;Unit;Assigned;AssignedName;Owner;OwnerName;TargetType;Id;Index;Code;Name;Value;Description;LeftIndex;ParentId;Level;Value;RightIndex;Created;CreatedBy;Modified;ActualStartDate;ActualFinishDate",
+        RequestTemplate: "xDynamicData_Setting.Search",
+        AssignedUser: this.SessionId
+      }
+    );
+    this.$Utils.post(requestSearch).then(data => {
+      data = this.$Utils.getDataWithRoot(data, "R1.Data.DynamicDS.Setting");
+      var ListProject = [];
+      var db = data;
+      var currentId = localStorage.getItem("UserId");
+      db.forEach((ele, key) => {
+        ele.isOwner = false;
+        ele.isAssigned = false;
+        if (ele.Owner && ele.Owner.toLowerCase().indexOf(currentId) > -1) {
+          ele.isOwner = true;
+        }
+        if (
+          ele.Assigned &&
+          ele.Assigned.toLowerCase().indexOf(currentId) > -1
+        ) {
+          ele.isAssigned = true;
+        }
+        ele.GroupName = "";
+        if (this.$Utils.isEmpty(ele.Modified))
+          ele.Modified = this.$Utils.formatDateTime(
+            ele.Modified,
+            "HH:mm DD-MM-YYYY"
+          );
+        if (isNaN(ele.Progress) || ele.Progress === undefined) {
+          ele.Progress = 0;
+        } else {
+          ele.Progress = Math.round(parseFloat(ele.Progress));
+          if (ele.Progress > 100) ele.Progress = 100;
+        }
+
+        this.listTargetDetail.push(ele);
+      });
+    });
+  },
+  watch: {}
+};
+</script>
+<style lang="scss">
+.timeline-page {
+  .red-badge {
+    color: red;
+    .el-badge__content {
+      background-color: red;
+      color: white;
+    }
+  }
+
+  .el-badge__content {
+    background-color: #ececec;
+    color: black;
+  }
+
+  .hr {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed black;
+    .row {
+      float: right;
+    }
+  }
+
+  .chkbx {
+    margin: 0px;
+  }
+
+  /* The side navigation menu */
+  .sidenav {
+    height: 100%; /* 100% Full-height */
+    width: 0; /* 0 width - change this with JavaScript */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Stay on top */
+    top: 50; /* Stay at the top */
+    right: 0;
+    background-color: white; /* Black*/
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding-top: 30px; /* Place content 60px from the top */
+    transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */
+  }
+
+  /* The navigation menu links */
+  .sidenav a {
+    //padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: #818181;
+    display: block;
+    transition: 0.3s;
+  }
+
+  .menuTab {
+    padding-left: 5px;
+  }
+
+  /* When you mouse over the navigation links, change their color */
+  .sidenav a:hover {
+    color: #f1f1f1;
+  }
+
+  /* Position and style the close button (top right corner) */
+  .sidenav .closebtn {
+    position: absolute;
+    top: 0;
+    right: 10px;
+    font-size: 25px;
+    margin-left: 50px;
+  }
+
+  /* Style page content - use this if you want to push the page content to the right when you open the side navigation */
+  #main {
+    transition: margin-left 0.5s;
+    padding: 20px;
+    .el-select {
+      padding-bottom: 10px;
+    }
+  }
+
+  /* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
+  @media screen and (max-height: 450px) {
+    .sidenav {
+      padding-top: 15px;
+    }
+    .sidenav a {
+      font-size: 18px;
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .el-date-range-picker {
+      overflow: auto !important;
+      width: 100% !important;
+    }
+  }
+
+  .left-scroll {
+    max-height: 83vh;
+    overflow-y: scroll;
+  }
+  .right-scroll {
+    max-height: 54vh;
+    overflow-y: scroll;
+  }
+  @media screen and (max-width: 1366px) {
+    .left-scroll {
+      max-height: 79vh;
+      overflow-y: scroll;
+    }
+    .right-scroll {
+      max-height: 49vh;
+      overflow-y: scroll;
+    }
+    @media screen and (max-width: 375px) {
+      .left-scroll {
+        max-height: 77vh;
+        overflow-y: scroll;
+      }
+    }
+  }
+  .pd-right-10 {
+    padding-right: 10px;
+  }
+  .padding-0 {
+    padding: 0 !important;
+  }
+
+  .b-600 {
+    font-weight: 600;
+  }
+  body {
+    font-size: 13px;
+  }
+  .span-block-border {
+    text-align: center;
+    width: 60%;
+    display: inline-block;
+    span {
+      margin: auto;
+    }
+    .el-progress-bar__outer,
+    .el-progress-bar__inner {
+      border-radius: 0px;
+    }
+  }
+  .el-progress-bar__innerText {
+    color: #0b0e0f;
+  }
+
+  .el-card__body {
+    padding: 5px 14px 5px 5px !important;
+  }
+
+  .center-div {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    width: auto;
+  }
+
+  .status {
+    .el-main {
+      margin-bottom: 10px;
+    }
+  }
+
+  .rightaligndiv {
+    padding-right: 5px;
+  }
+
+  .el-card {
+    margin-bottom: 5px;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .round-image {
+    border-radius: 50%;
+    max-height: 50px;
+    display: block;
+    margin: auto;
+  }
+
+  .target-header {
+    font-size: 16px;
+  }
+
+  .el-container {
+    //background-color: #fff;
+    color: #333;
+    padding-top: 5px;
+  }
+
+  .el-main {
+    padding: 0px;
+    .el-container {
+      padding: 5px;
+    }
+  }
+  .el-checkbox__label {
+    margin-right: 5px;
+  }
+  .el-header {
+    padding-top: 5px;
+    height: 32px !important;
+    line-height: 27px;
+    font-size: 16px;
+    background-color: #f0f3f5;
+    border: 1px solid #c2cfd6;
+    .rightaligndiv {
+      text-align: right;
+    }
+  }
+  @media screen and (max-width: 599px) {
+    .container-fluid {
+      padding: 0px 5px !important;
+    }
+    .timeline-page {
+      .el-header {
+        height: 32px !important;
+      }
+    }
+  }
+}
+</style>

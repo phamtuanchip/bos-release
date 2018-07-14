@@ -1,0 +1,58 @@
+//Type 1 if-{if-else}-else
+{
+	"NumberCase": 2,
+	"Case_1": {
+		"Option": ".SUP(!(Category2)!).SUP == .SUP8fb1e320-8739-43bf-a833-470038083531.SUP",
+		"Result": "0"
+	},
+	"Case_2": {
+		"Result": {
+			"Phase_1": {
+				"NumberCase": 2,
+				"Case_1": {
+					"Option": ".SUP(!(ResultProgress)!).SUP == .SUPe6150117-ae6a-415e-9adc-7d8e13ae5b04.SUP",
+					"Result": "1"
+				},
+				"Case_2": {
+					"Result": "0"
+				}
+			},
+			"Phase_2": {
+				"NumberCase": 2,
+				"Case_1": {
+					"Option": "0.8<.SUP(!(ActualManHour)!).SUP / .SUP(!(PlanManHour)!).SUP && .SUP(!(ActualManHour)!).SUP / .SUP(!(PlanManHour)!).SUP<1.2",
+					"Result": "1"
+				},
+				"Case_2": {
+					"Result": "0"
+				}
+			},
+			"TotalResult": "0.35*(!(Progress)!)*0.01+0.5*(!(Phase_1)!)+0.15*(!(Phase_2)!)"
+		}
+	}
+}
+//Type 2 if-else-if
+
+{
+	"NumberCase": 5,
+	"Case_1": {
+		"Option": ".SUP(!(Status)!).SUP == .SUP1ce649a5-c83f-4895-a1f4-d0f09d252c53.SUP",
+		"Result": "0"
+	},
+	"Case_2": {
+		"Option": ".SUP(!(Status)!).SUP == .SUP3df456be-51e9-4679-b091-95f53fd54cee.SUP",
+		"Result": "0"
+	},
+	"Case_3": {
+		"Option": ".SUP(!(Status)!).SUP == .SUP775f6423-0a30-4bd6-a22b-1d73ef294820.SUP",
+		"Result": "0"
+	},
+	"Case_4": {
+		"Option": ".SUP(!(Status)!).SUP == .SUP96ae97b1-8fa6-4242-b2f6-dc9b91a98eb9.SUP",
+		"Result": "0"
+	},
+	"Case_5": {
+		"Option": ".SUP(!(Status)!).SUP == .SUPfd664aa2-b883-45c6-b480-eb6e4cb0bb0a.SUP",
+		"Result": "0"
+	}
+}

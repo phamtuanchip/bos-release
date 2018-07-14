@@ -1,0 +1,83 @@
+{
+	"AfterUpdate": "UpdateAnother",
+	"MultiTarget": "true",
+	"Request": [
+		{
+			"NewValue": {
+				"Name": "{{Name}}",
+				"Gender": "{{Gender}}",
+				"GenderName": "{{GenderName}}",
+				"Phone": "{{Phone}}",
+				"FacebookLink": "{{FacebookLink}}",
+				"Birthday": "{{Birthday}}",
+				"CustomerCode": "{{IdentityCode}}",
+				"OtherPhone": "{{OtherPhone}}",
+				"Email": "{{Email}}",
+				"Location": "{{Location}}",
+				"Address": "{{Address}}",
+				"Hight": "{{Hight}}",
+				"Weight": "{{Weight}}",
+				"Title": "{{Title}}",
+				"Type": "{{Type}}"
+			},
+			"RequestConditions": "Id;Code;RequestDataGroup;RequestFields;CustomerCode",
+			"Code": "Order",
+			"RequestDataGroup": "DataGroup.order.9ejnl",
+			"CustomerCode": "{{IdentityCode}}",
+			"RequestFields": "Id;Code;MetaDescription;CustomerCode",
+			"RequestTemplate": "xDocument_Document.",
+			"RootData": "Data.DocumentDS.Document",
+			"ParentChild": "true"
+		},
+		{
+			"NewValue": {
+				"Name": "{{Name}}",
+				"Gender": "{{Gender}}",
+				"GenderName": "{{GenderName}}",
+				"Phone": "{{Phone}}",
+				"FacebookLink": "{{FacebookLink}}",
+				"Birthday": "{{Birthday}}",
+				"CustomerCode": "{{IdentityCode}}",
+				"OtherPhone": "{{OtherPhone}}",
+				"Email": "{{Email}}",
+				"Location": "{{Location}}",
+				"Address": "{{Address}}",
+				"Hight": "{{Hight}}",
+				"Weight": "{{Weight}}",
+				"Title": "{{Title}}",
+				"Type": "{{Type}}"
+			},
+			"RequestConditions": "Id;Code;RequestDataGroup;RequestFields;CustomerCode",
+			"Code": "OrderPart",
+			"RequestDataGroup": "DataGroup.orderpart.82fjy",
+			"CustomerCode": "{{IdentityCode}}",
+			"RequestFields": "Id;Code;MetaDescription;CustomerCode",
+			"RequestTemplate": "xDocument_Document.",
+			"RootData": "Data.DocumentDS.Document",
+			"ParentChild": "true"
+		},
+		{
+			"NewValue": {
+				"Name": "{{Name}}",
+				"Gender": "{{Gender}}",
+				"GenderName": "{{GenderName}}",
+				"Phone": "{{Phone}}",
+				"FacebookLink": "{{FacebookLink}}",
+				"Birthday": "{{Birthday}}",
+				"CustomerCode": "{{IdentityCode}}",
+				"OtherPhone": "{{OtherPhone}}",
+				"Email": "{{Email}}",
+				"Location": "{{Location}}",
+				"LocationName": "{{LocationName}}"
+			},
+			"RequestConditions": "Id;Code;RequestDataGroup;RequestFields;CustomerCode",
+			"Code": "Lead",
+			"RequestDataGroup": "DataGroup.lead.9jwnc",
+			"CustomerCode": "{{IdentityCode}}",
+			"RequestFields": "Id;Code;CustomerCode",
+			"RequestTemplate": "xDocument_Document.",
+			"RootData": "Data.DocumentDS.Document",
+			"ParentChild": "true"
+		}
+	]
+}

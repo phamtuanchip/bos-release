@@ -1,0 +1,21 @@
+{
+  "name": "mantis.edu.vn",
+  "version": "1.0.0",
+  "displayName": "Mantis mobile",
+  "cordova": {
+    "platforms": [
+      "ios"
+    ],
+    "plugins": {
+      "cordova-plugin-whitelist": {},
+      "cordova-plugin-device": {},
+      "phonegap-plugin-push": {}
+    }
+  },
+  "dependencies": {
+    "cordova-ios": "^4.5.4",
+    "cordova-plugin-device": "^1.1.6",
+    "cordova-plugin-whitelist": "^1.3.2",
+    "phonegap-plugin-push": "^2.2.2"
+  }
+}

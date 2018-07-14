@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="mobile.mantis.vn" version="1.6.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Mantis Task</name>
+    <description>
+        Mantis Task Managerment
+    </description>
+    <author email="bos.edu.vn@gmail.com" href="http://bos.edu.vn">
+        Dev Team
+    </author>
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    <allow-intent href="ws:*" />
+    <preference name="phonegap-version" value="cli-6.4.0" />
+    <platform name="ios">
+        <allow-intent href="itms:*" />
+        <allow-intent href="itms-apps:*" />
+        <hook src="hooks/iosrtc-swift-support.js" type="after_platform_add" />
+    </platform>
+    <plugin name="cordova-plugin-whitelist" spec="1" />
+    <plugin name="cordova-plugin-device" spec="~1.1.6" />
+    <plugin name="phonegap-plugin-push" spec="~2.2.2" />
+    <engine name="ios" spec="^4.5.4" />
+</widget>

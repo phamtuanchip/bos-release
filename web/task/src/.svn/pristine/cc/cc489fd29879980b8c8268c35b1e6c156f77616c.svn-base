@@ -1,0 +1,244 @@
+<template>
+    <div class="gantt-header">
+        <div class="gantt-header-navigator">
+          
+                <div class="InlineFilter" v-if="!$isMobileDevice">
+                  <el-checkbox @change="onChangeDate" v-model="DateProject"><span class="sm-none">Thời gian</span></el-checkbox>
+                  <el-checkbox @change="onChangeDueDate" v-model="DueDate"><span class="sm-none">Đến hạn</span></el-checkbox>
+                  <el-checkbox @change="onChangeOverDue" v-model="OverDue"><span class="sm-none">Quá hạn</span></el-checkbox>
+
+                  <el-select  @change="onChangeWorker" v-model="WorkerProject" filterable  placeholder="Nhân sự thực hiện" multiple
+                            collapse-tags no-data-text="Không có dữ liệu">
+                    <el-option-group
+                      v-for="group in workers"
+                      :key="group.label"
+                      :label="group.label">
+                        
+                      <el-option
+                        v-for="item in group.options"
+                        :key="item.UserId"
+                        :label="item.Username"
+                        :value="item.UserId">
+                      </el-option>
+                    </el-option-group>
+                  </el-select>             
+                  <el-select class="Status" @change="onChangeStatus" v-model="StatusTask" filterable  placeholder="Trạng thái" multiple
+                            collapse-tags no-data-text="Không có dữ liệu">
+                    <el-option v-for="item in status"
+                              :key="item.Id"
+                              :label="item.Name"
+                              :value="item.Id">
+                    </el-option>
+                  </el-select>     
+               </div>
+                <div v-if="$isMobileDevice" class="gantt-header-today">
+                 <i class="AdvFilter fa fa-filter" v-b-modal.GanttFilter></i>
+                </div>
+               <b-modal class="chartFilter text-primary" id="GanttFilter" ref="GanttFilter" title="Bộ lọc"  header-bg-variant="primary" hide-footer>
+                <template>
+                  <el-form>
+                    <el-form-item label="">
+                      <el-checkbox @change="onChangeDate" v-model="DateProject"><span >Theo khoảng thời gian</span></el-checkbox>
+                    </el-form-item>                   
+                    
+                    <el-form-item label="">
+                      <el-checkbox @change="onChangeDueDate" v-model="DueDate"><span class="sm-none">Đến hạn</span></el-checkbox>
+                    </el-form-item>    
+                    <el-form-item label="">
+                      <el-checkbox @change="onChangeOverDue" v-model="OverDue"><span class="sm-none">Quá hạn</span></el-checkbox>
+                    </el-form-item> 
+                    <el-form-item label="">
+                      <el-select  @change="onChangeWorker" v-model="WorkerProject" filterable  placeholder="Nhân sự thực hiện" multiple
+                                collapse-tags no-data-text="Không có dữ liệu">
+                        <el-option-group
+                          v-for="group in workers"
+                          :key="group.label"
+                          :label="group.label">
+                            
+                          <el-option
+                            v-for="item in group.options"
+                            :key="item.UserId"
+                            :label="item.Username"
+                            :value="item.UserId">
+                          </el-option>
+                        </el-option-group>
+                      </el-select>  
+                      
+                   </el-form-item>   
+                   
+                    <el-form-item label="">       
+                      <el-select class="Status" @change="onChangeStatus" v-model="StatusTask" filterable  placeholder="Trạng thái" multiple
+                                collapse-tags no-data-text="Không có dữ liệu">
+                        <el-option v-for="item in status"
+                                  :key="item.Id"
+                                  :label="item.Name"
+                                  :value="item.Id">
+                        </el-option>
+                      </el-select>  
+                    </el-form-item>  
+                     
+                       <el-button @click="resetFilter" >Lọc mặc định</el-button>
+                     
+                  </el-form>
+                </template>
+               </b-modal>
+
+            <div v-if="$isMobileDevice" class="gantt-header-today">
+                <i :class="(isShowTask ? 'fa fa-window-maximize' : 'fa fa-columns')" @click="switchView"></i>
+            </div>    
+            <div class="gantt-header-today">
+                 <!--<button @click="onView">-->
+                   <!--Tuần-->
+                <!--</button>-->
+                 <!--<button @click="onView">-->
+                  <!--Tháng-->
+                <!--</button>-->
+                  
+                <el-button type="text" @click="onToday">
+                   Hôm nay
+                </el-button>
+            </div>
+            <div class="gantt-header-arrow">
+                <i class="fa fa-arrow-circle-o-left"  @click="onPrev"></i>
+                <i class="fa fa-arrow-circle-o-right" @click="onNext"></i>
+            </div>
+        </div>
+    </div>
+</template>
+<script>
+export default {
+  name: "ganttHeader",
+  props: {
+    baseList: {
+      type: Array,
+      default() {
+        return [];
+      }
+    },
+    workers: {
+      type: Array,
+      default() {
+        return [];
+      }
+    },
+    status: {
+      type: Object,
+      default() {
+        return [];
+      }
+    },
+    active: {
+      type: Array,
+      default() {
+        return [
+          { Id: "", Name: "Tất cả" },
+          { Id: "1", Name: "Đang hoạt động" },
+          { Id: "0", Name: "Không hoạt động" }
+        ];
+      }
+    },
+    onChangeOverDue: {
+      type: Function
+    },
+    onResetFilter: {
+      type: Function
+    },
+    onChangeDueDate: {
+      type: Function
+    },
+    onChangeActive: {
+      type: Function
+    },
+    onChangeStatus: {
+      type: Function
+    },
+    onChangeProject: {
+      type: Function
+    },
+    onChangeWorker: {
+      type: Function
+    },
+    onChangeDate: {
+      type: Function
+    },
+    onView: {
+      type: Function
+    },
+    onToday: {
+      type: Function
+    },
+    onPrev: {
+      type: Function
+    },
+    onNext: {
+      type: Function
+    },
+    switchView: {
+      type: Function
+    },
+    isShowTask: {
+      type: Boolean,
+      default() {
+        return true;
+      }
+    }
+  },
+  data() {
+    return {
+      VersionProject: [],
+      WorkerProject: [],
+      StatusTask: [],
+      DateProject: true,
+      DueDate: false,
+      OverDue: false,
+      UserActive: []
+    };
+  },
+  methods: {
+    resetFilter() {
+      (this.DateProject = true), (this.WorkerProject = "");
+      (this.StatusTask = ""),
+        (this.DueDate = false),
+        (this.OverDue = false),
+        this.onResetFilter(
+          this.DateProject,
+          this.WorkerProject,
+          this.StatusTask,
+          this.DueDate,
+          this.OverDue
+        );
+    }
+  }
+};
+</script>
+<style>
+.gantt-header {
+  display: flex;
+  width: 100%;
+  height: 45px;
+  line-height: 45px;
+  background: #f3f4f5;
+  box-sizing: border-box;
+  border-left: 2px solid #dcdee2;
+  padding: 0 10px;
+}
+/* .gantt-header .Status {
+  width: 100px !important;
+} */
+
+.gantt-header-navigator {
+  color: #8d919a;
+  right: 10px;
+  position: absolute;
+  display: inline-flex;
+}
+.gantt-header-navigator > div {
+  margin-right: 10px;
+}
+.gantt-header-navigator > div:last-child {
+  margin-right: 0;
+}
+.gantt-header-arrow button {
+  margin-left: 0;
+}
+</style>
